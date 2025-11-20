@@ -9,8 +9,9 @@ import img1003194535 from "figma:asset/a5b77e2818ec988a48ca02b106f131f56b395a9a.
 import img1000061762 from "figma:asset/1742d8059b28151d4de31489569a7beabfa8730c.png";
 import imgKiddiesMagazineCoverPageMay3 from "figma:asset/0a8506d7a4858d807d480735680d60420b944f40.png";
 import img1000893181 from "../../assets/1742d8059b28151d4de31489569a7beabfa8730c.png";
-import imgImage4 from "../../assets/3e53b923fe681dafd828b1ec28769be5e02ee7d2.png";
+import imgImage4 from "../../assets/1742d8059b28151d4de31489569a7beabfa8730c.png";
 import imgH3A2447 from "../../assets/a5b77e2818ec988a48ca02b106f131f56b395a9a.png";
+import imgNewFrame from "../../assets/3e53b923fe681dafd828b1ec28769be5e02ee7d2.png";
 import imgImage5 from "figma:asset/c3fcf8bf8f17a9d9b4248889deffbdf66d9fc330.png";
 import imgBg from "figma:asset/caa16e8d8a0e15a5b25985e4bb467e1dc0ed6349.png";
 import imgImage34 from "figma:asset/54c57a7128b8456203a2a1e1fc6215e485494d85.png";
@@ -159,6 +160,26 @@ function Frame() {
   );
 }
 
+function FrameNew() {
+  return (
+    <div className="basis-0 grow h-[445px] min-h-px min-w-px overflow-hidden relative shrink-0">
+      <motion.div
+        className="absolute h-[755px] left-[-143px] top-[-68px] w-[1133px]" 
+        data-name="image new"
+        initial={{ scale: 1 }}
+        animate={{ scale: [1, 1.04, 1] }}
+        transition={{ duration: 5.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+      >
+        <img
+          alt="Child reading the Healing to the Nations Magazine"
+          className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
+          src={imgNewFrame}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 function Frame1() {
   return (
     <div className="basis-0 grow h-[445px] min-h-px min-w-px overflow-clip relative shrink-0">
@@ -178,9 +199,8 @@ function Frame1() {
 function Frame3() {
   return (
     <div className="absolute content-stretch flex gap-[24px] h-[445px] items-center left-[calc(50%-0.5px)] top-[1206px] translate-x-[-50%] w-[1442px]">
-      {[...Array(2).keys()].map((_, i) => (
-        <Frame key={i} />
-      ))}
+      <Frame />
+      <FrameNew />
       <Frame1 />
     </div>
   );

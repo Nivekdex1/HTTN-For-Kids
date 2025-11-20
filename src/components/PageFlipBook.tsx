@@ -10,14 +10,28 @@ interface Page {
 interface PageFlipBookProps {
   pages: Page[];
   onPageChange?: (pageNumber: number) => void;
+  initialPage?: number;
 }
 
-export function PageFlipBook({ pages, onPageChange }: PageFlipBookProps) {
-  const [currentPage, setCurrentPage] = useState(0);
+export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipBookProps) {
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (Number.isInteger(initialPage)) {
+      return Math.min(Math.max(initialPage, 0), pages.length - 1);
+    }
+    return 0;
+  });
   const [direction, setDirection] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const flippingTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!Number.isInteger(initialPage)) return;
+    const safePage = Math.min(Math.max(initialPage, 0), pages.length - 1);
+    if (safePage !== currentPage && !isFlipping) {
+      setCurrentPage(safePage);
+    }
+  }, [initialPage, pages.length, currentPage, isFlipping]);
 
   const stopAllAudio = useCallback(() => {
     // Stop speech synthesis immediately
@@ -298,13 +312,13 @@ export function PageFlipBook({ pages, onPageChange }: PageFlipBookProps) {
       {!isMobile && currentPage > 0 && (
         <motion.button
           onClick={prevPage}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full p-4 transition-all disabled:opacity-30"
+          className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-[0_25px_55px_rgba(0,0,0,0.4)] transition-all hover:shadow-[0_30px_65px_rgba(0,0,0,0.5)] focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 disabled:opacity-30 disabled:shadow-none"
           aria-label="Previous page"
           disabled={isFlipping}
-          whileHover={{ scale: 1.1, x: -5 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.08, x: -8 }}
+          whileTap={{ scale: 0.92 }}
         >
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </motion.button>
@@ -313,13 +327,13 @@ export function PageFlipBook({ pages, onPageChange }: PageFlipBookProps) {
       {!isMobile && currentPage < pages.length - 1 && (
         <motion.button
           onClick={nextPage}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full p-4 transition-all disabled:opacity-30"
+          className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-[0_25px_55px_rgba(0,0,0,0.4)] transition-all hover:shadow-[0_30px_65px_rgba(0,0,0,0.5)] focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 disabled:opacity-30 disabled:shadow-none"
           aria-label="Next page"
           disabled={isFlipping}
-          whileHover={{ scale: 1.1, x: 5 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.08, x: 8 }}
+          whileTap={{ scale: 0.92 }}
         >
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </motion.button>

@@ -123,9 +123,8 @@ export default function Page7() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
   
-  // Undo/Redo state
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyStep, setHistoryStep] = useState(-1);
+  // Undo/Redo state (bounded to last 10 actions)
+  const [historyState, setHistoryState] = useState<{ stack: string[]; pointer: number }>({ stack: [], pointer: -1 });
   const isRestoringRef = useRef(false);
 
   // Load the coloring image and restore saved work
@@ -264,38 +263,41 @@ export default function Page7() {
 
     // Save only the drawing layer (brush strokes)
     const dataURL = drawingCanvas.toDataURL();
-    
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyStep + 1);
-      newHistory.push(dataURL);
-      
-      // Keep only last MAX_HISTORY states
-      if (newHistory.length > MAX_HISTORY) {
-        return newHistory.slice(newHistory.length - MAX_HISTORY);
-      }
-      return newHistory;
-    });
-    
-    setHistoryStep(prev => {
-      const newStep = prev + 1;
-      return newStep >= MAX_HISTORY ? MAX_HISTORY - 1 : newStep;
+
+    setHistoryState(prev => {
+      const leadingStates = prev.stack.slice(0, prev.pointer + 1);
+      const appended = [...leadingStates, dataURL];
+      const trimmed = appended.length > MAX_HISTORY
+        ? appended.slice(appended.length - MAX_HISTORY)
+        : appended;
+
+      return {
+        stack: trimmed,
+        pointer: trimmed.length - 1,
+      };
     });
   };
 
   const undo = () => {
-    if (historyStep > 0) {
-      const newStep = historyStep - 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(history[newStep]);
-    }
+    setHistoryState(prev => {
+      if (prev.pointer <= 0) {
+        return prev;
+      }
+      const newPointer = prev.pointer - 1;
+      restoreFromHistory(prev.stack[newPointer]);
+      return { ...prev, pointer: newPointer };
+    });
   };
 
   const redo = () => {
-    if (historyStep < history.length - 1) {
-      const newStep = historyStep + 1;
-      setHistoryStep(newStep);
-      restoreFromHistory(history[newStep]);
-    }
+    setHistoryState(prev => {
+      if (prev.pointer >= prev.stack.length - 1) {
+        return prev;
+      }
+      const newPointer = prev.pointer + 1;
+      restoreFromHistory(prev.stack[newPointer]);
+      return { ...prev, pointer: newPointer };
+    });
   };
 
   const restoreFromHistory = (dataURL: string) => {
@@ -558,14 +560,14 @@ export default function Page7() {
             <div className="grid grid-cols-2 gap-4">
               <motion.button
                 onClick={undo}
-                disabled={historyStep <= 0}
+                disabled={historyState.pointer <= 0}
                 className={`p-5 rounded-2xl flex flex-col items-center gap-2 transition-all shadow-lg ${
-                  historyStep <= 0
+                  historyState.pointer <= 0
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:from-blue-600 hover:to-blue-800'
                 }`}
-                whileHover={historyStep > 0 ? { scale: 1.05 } : {}}
-                whileTap={historyStep > 0 ? { scale: 0.95 } : {}}
+                whileHover={historyState.pointer > 0 ? { scale: 1.05 } : {}}
+                whileTap={historyState.pointer > 0 ? { scale: 0.95 } : {}}
               >
                 <Undo className="w-12 h-12" />
                 <span className="text-xl font-black text-[32px]">Undo</span>
@@ -573,14 +575,14 @@ export default function Page7() {
 
               <motion.button
                 onClick={redo}
-                disabled={historyStep >= history.length - 1}
+                disabled={historyState.pointer >= historyState.stack.length - 1}
                 className={`p-5 rounded-2xl flex flex-col items-center gap-2 transition-all shadow-lg ${
-                  historyStep >= history.length - 1
+                  historyState.pointer >= historyState.stack.length - 1
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:from-blue-600 hover:to-blue-800'
                 }`}
-                whileHover={historyStep < history.length - 1 ? { scale: 1.05 } : {}}
-                whileTap={historyStep < history.length - 1 ? { scale: 0.95 } : {}}
+                whileHover={historyState.pointer < historyState.stack.length - 1 ? { scale: 1.05 } : {}}
+                whileTap={historyState.pointer < historyState.stack.length - 1 ? { scale: 0.95 } : {}}
               >
                 <Redo className="w-12 h-12" />
                 <span className="text-xl font-black text-[32px]">Redo</span>

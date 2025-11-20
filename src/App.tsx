@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MagazineContainer } from './components/MagazineContainer';
 import { PageFlipBook } from './components/PageFlipBook';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -36,6 +36,7 @@ interface UserData {
 
 // Admin username constant
 const ADMIN_USERNAME = 'HTTNADMIN';
+const SESSION_STORAGE_KEY = 'httn-magazine-session';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('welcome');
@@ -43,6 +44,9 @@ export default function App() {
   const [accessToken, setAccessToken] = useState<string>('');
   const [signupUsername, setSignupUsername] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const hasRestoredSessionRef = useRef(false);
 
   useBackgroundAssetPreloader();
 
@@ -96,6 +100,7 @@ export default function App() {
         setIsAdmin(true);
         setAccessToken('HTTNADMIN_TOKEN');
         setAppState('admin');
+        setCurrentPage(0);
         return;
       }
       
@@ -124,6 +129,7 @@ export default function App() {
       setAccessToken(result.accessToken);
       setIsAdmin(false);
       setAppState('magazine');
+      setCurrentPage(result.lastPage ?? 0);
     } catch (error: any) {
       console.error('Login error details:', error);
       console.error('Error message:', error.message);
@@ -132,6 +138,7 @@ export default function App() {
   };
 
   const handlePageChange = async (pageNumber: number) => {
+    setCurrentPage(pageNumber);
     if (accessToken) {
       try {
         await fetch(
@@ -226,6 +233,53 @@ export default function App() {
     },
   ];
 
+  // Restore session data (credentials and last page)
+  useEffect(() => {
+    if (hasRestoredSessionRef.current) return;
+    if (typeof window === 'undefined') return;
+
+    try {
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.appState) setAppState(parsed.appState);
+        if (parsed.userData) setUserData(parsed.userData);
+        if (typeof parsed.accessToken === 'string') setAccessToken(parsed.accessToken);
+        if (typeof parsed.signupUsername === 'string') setSignupUsername(parsed.signupUsername);
+        if (typeof parsed.isAdmin === 'boolean') setIsAdmin(parsed.isAdmin);
+        if (typeof parsed.currentPage === 'number') {
+          const safePage = Math.min(Math.max(parsed.currentPage, 0), magazinePages.length - 1);
+          setCurrentPage(safePage);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore session state', error);
+    } finally {
+      hasRestoredSessionRef.current = true;
+      setSessionLoaded(true);
+    }
+  }, [magazinePages.length]);
+
+  // Persist session whenever auth/app state changes
+  useEffect(() => {
+    if (!sessionLoaded) return;
+    if (typeof window === 'undefined') return;
+
+    try {
+      const sessionPayload = {
+        appState,
+        userData,
+        accessToken,
+        signupUsername,
+        isAdmin,
+        currentPage,
+      };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+    } catch (error) {
+      console.warn('Failed to persist session state', error);
+    }
+  }, [appState, userData, accessToken, signupUsername, isAdmin, currentPage, sessionLoaded]);
+
   return (
     <>
       {appState === 'welcome' && (
@@ -255,7 +309,11 @@ export default function App() {
 
       {appState === 'magazine' && !isAdmin && (
         <MagazineContainer>
-          <PageFlipBook pages={magazinePages} onPageChange={handlePageChange} />
+          <PageFlipBook
+            pages={magazinePages}
+            onPageChange={handlePageChange}
+            initialPage={currentPage}
+          />
         </MagazineContainer>
       )}
 

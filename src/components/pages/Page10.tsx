@@ -20,6 +20,8 @@ export default function Page10() {
     const video = videoRef.current;
     if (!video) return;
 
+    video.playbackRate = 0.9;
+
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 

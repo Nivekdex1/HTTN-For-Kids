@@ -228,6 +228,7 @@ export default function Page2Contents({ userName, userAge }: Page2ContentsProps)
     const audioSrc = new URL('../../assets/P2.mp3', import.meta.url).href;
     audioElement.src = audioSrc;
     audioElement.volume = 1;
+    audioElement.playbackRate = 0.9;
 
     // Auto-play with a slight delay
     const playTimer = setTimeout(async () => {
