@@ -1,7 +1,6 @@
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import imgImage103 from "figma:asset/6670db219ffee6f74f8ecc372511467a6a333f29.png";
 import imgImage102 from "figma:asset/0f200693634fbadbb798fb477f06973e82a0ad76.png";
 import imgImage105 from "figma:asset/6290e0677e8664d9db2b7cf1efbd8343b6edd908.png";
@@ -12,6 +11,7 @@ import imgImage109 from "figma:asset/bb5e2f4aeffb1e30421524d6f65ac367781ba2d8.pn
 import imgBg from "figma:asset/f56f19080390f0aab5e19345c9ea5a24c1fce5eb.png";
 import imgLogoFooter from "figma:asset/cb184ec3e97d080377f37050765471c175b4f0b3.png";
 import imgCallLinks from "figma:asset/2af23d28e4a9c4c654bc9ba320f1eafd4a67ae7c.png";
+import pageAudio from "../../assets/16.mp3";
 
 function QrText() {
   return (
@@ -121,25 +121,48 @@ function Content() {
 
 export default function Page16() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: "Join Kidspiration today. Visit www dot kidspiration dot world. You can scan the QR code below to watch faith-inspiring and exciting Healing Streams testimonies and Videos.",
-    voiceGender: 'male',
-    autoplay: true,
-    delay: 2000, // Wait for animations
-  });
+  useEffect(() => {
+    const audio = new Audio(pageAudio);
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
+    audioRef.current = audio;
 
-  const toggleAudio = () => {
+    const timer = setTimeout(async () => {
+      if (!audioRef.current) return;
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Auto-play blocked for Page 16 audio', err);
+      }
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      const currentAudio = audioRef.current;
+      if (!currentAudio) return;
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio.removeEventListener('ended', handleEnded);
+      audioRef.current = null;
+    };
+  }, []);
+
+  const toggleAudio = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (isPlaying) {
-      pauseVoiceover();
+      audio.pause();
       setIsPlaying(false);
     } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
+      try {
+        await audio.play();
         setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Unable to play Page 16 audio', err);
       }
     }
   };

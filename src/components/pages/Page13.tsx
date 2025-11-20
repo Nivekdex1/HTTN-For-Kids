@@ -1,7 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
-import { Volume2, VolumeX } from 'lucide-react';
 import imgImage79 from "figma:asset/45568fea0eb567ba1072b1d58968ed9786abf915.png";
 import imgImage80 from "figma:asset/03f9254d9dcd811f1de3a9543d53094aa18fd418.png";
 import imgImage77 from "figma:asset/a1683c550f5af9f734a5a5d39452309c74abbd72.png";
@@ -17,162 +15,209 @@ import imgImage70 from "figma:asset/c4047ee61a4e26ca5bb51149b1b1f9e8036f6e0e.png
 import imgImage81 from "figma:asset/38732b862fb50223567761ab8a7c79783b0c8518.png";
 import imgImage68 from "figma:asset/1ebe7c8e2a00eecd9e542b7b12a4c592726a13d3.png";
 import imgImage67 from "figma:asset/26b6466d9955a3b8931f1c7b267091e0578ad24a.png";
+import wiggle1Video from "../../assets/wiggle 1.mp4";
+import wiggle2Video from "../../assets/wiggle 2.mp4";
+import wiggle3Video from "../../assets/wiggle 3.mp4";
+import wiggle4Video from "../../assets/wiggle 4.mp4";
+import wiggle5Video from "../../assets/wiggle 5.mp4";
+import wiggle6Video from "../../assets/wiggle 6.mp4";
+import wiggleEndingAudio from "../../assets/Wigend.mp3";
 
-function Item5() {
+type WiggleEntry = {
+  id: number;
+  positionClass: string;
+  containerDataName: string;
+  titleImg: string;
+  titleAlt: string;
+  titleWrapperClass: string;
+  titleDataName: string;
+  rotateDelay: number;
+  posterImg: string;
+  posterAlt: string;
+  mediaWrapperClass: string;
+  mediaDataName: string;
+  videoSrc: string;
+  containerDelay: number;
+};
+
+const WIGGLE_ITEMS: WiggleEntry[] = [
+  {
+    id: 0,
+    positionClass: "left-[7px] top-[152px] w-[629px]",
+    containerDataName: "Item 1",
+    titleImg: imgImage69,
+    titleAlt: "Pray in the Holy Ghost",
+    titleWrapperClass: "h-[161px] relative shrink-0 w-[609.5px]",
+    titleDataName: "image 69",
+    rotateDelay: 0.5,
+    posterImg: imgImage70,
+    posterAlt: "Pray in the Holy Ghost illustration",
+    mediaWrapperClass: "h-[343px] relative shrink-0 w-[629px]",
+    mediaDataName: "image 70",
+    videoSrc: wiggle1Video,
+    containerDelay: 0.2,
+  },
+  {
+    id: 1,
+    positionClass: "left-[773px] top-[191px] w-[637px]",
+    containerDataName: "Item 2",
+    titleImg: imgImage71,
+    titleAlt: "Brain Boost",
+    titleWrapperClass: "h-[157px] relative shrink-0 w-[544px]",
+    titleDataName: "image 71",
+    rotateDelay: 0.7,
+    posterImg: imgImage72,
+    posterAlt: "Brain Boost illustration",
+    mediaWrapperClass: "h-[333px] relative shrink-0 w-[637px]",
+    mediaDataName: "image 72",
+    videoSrc: wiggle2Video,
+    containerDelay: 0.4,
+  },
+  {
+    id: 2,
+    positionClass: "left-[12px] top-[772px] w-[624px]",
+    containerDataName: "Item 3",
+    titleImg: imgImage73,
+    titleAlt: "Shake It Out",
+    titleWrapperClass: "h-[161px] relative shrink-0 w-[596px]",
+    titleDataName: "image 73",
+    rotateDelay: 0.9,
+    posterImg: imgImage74,
+    posterAlt: "Shake It Out illustration",
+    mediaWrapperClass: "h-[340px] relative shrink-0 w-[624px]",
+    mediaDataName: "image 74",
+    videoSrc: wiggle3Video,
+    containerDelay: 0.6,
+  },
+  {
+    id: 3,
+    positionClass: "left-[766px] top-[797px] w-[649px]",
+    containerDataName: "Item 4",
+    titleImg: imgImage75,
+    titleAlt: "Stretch & Reach Combo",
+    titleWrapperClass: "h-[161px] relative shrink-0 w-[670px]",
+    titleDataName: "image 75",
+    rotateDelay: 1.1,
+    posterImg: imgImage76,
+    posterAlt: "Stretch & Reach Combo illustration",
+    mediaWrapperClass: "aspect-[1238/676] relative shrink-0 w-full",
+    mediaDataName: "image 76",
+    videoSrc: wiggle4Video,
+    containerDelay: 0.8,
+  },
+  {
+    id: 4,
+    positionClass: "left-0 top-[1389px] w-[646px]",
+    containerDataName: "Item 5",
+    titleImg: imgImage77,
+    titleAlt: "Silent Dance Challenge",
+    titleWrapperClass: "h-[161px] relative shrink-0 w-[679px]",
+    titleDataName: "image 77",
+    rotateDelay: 1.3,
+    posterImg: imgImage78,
+    posterAlt: "Silent Dance Challenge illustration",
+    mediaWrapperClass: "aspect-[1244/680] relative shrink-0 w-full",
+    mediaDataName: "image 78",
+    videoSrc: wiggle5Video,
+    containerDelay: 1.0,
+  },
+  {
+    id: 5,
+    positionClass: "left-[781px] top-[1412px] w-[618px]",
+    containerDataName: "Item 6",
+    titleImg: imgImage79,
+    titleAlt: "Mirror Moves",
+    titleWrapperClass: "h-[161px] relative shrink-0 w-[596px]",
+    titleDataName: "image 79",
+    rotateDelay: 1.5,
+    posterImg: imgImage80,
+    posterAlt: "Mirror Moves illustration",
+    mediaWrapperClass: "h-[337px] relative shrink-0 w-[618px]",
+    mediaDataName: "image 80",
+    videoSrc: wiggle6Video,
+    containerDelay: 1.2,
+  },
+];
+
+type WiggleItemProps = WiggleEntry & {
+  activeIndex: number | null;
+  registerVideoRef: (index: number, element: HTMLVideoElement | null) => void;
+  handleVideoPlay: (index: number) => void;
+  handleVideoEnded: (index: number) => void;
+};
+
+function WiggleItem({
+  id,
+  positionClass,
+  containerDataName,
+  titleImg,
+  titleAlt,
+  titleWrapperClass,
+  titleDataName,
+  rotateDelay,
+  posterImg,
+  posterAlt,
+  mediaWrapperClass,
+  mediaDataName,
+  videoSrc,
+  containerDelay,
+  activeIndex,
+  registerVideoRef,
+  handleVideoPlay,
+  handleVideoEnded,
+}: WiggleItemProps) {
   return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-[781px] top-[1412px] w-[618px]" 
-      data-name="Item 6"
+    <motion.div
+      className={`absolute content-stretch flex flex-col gap-[16px] items-center ${positionClass}`}
+      data-name={containerDataName}
       initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 1.2 }}
+      animate={{ opacity: 1, scale: activeIndex === id ? 1.05 : 1, y: 0 }}
+      transition={{ duration: 0.6, delay: containerDelay }}
       whileHover={{ scale: 1.05 }}
     >
-      <motion.div 
-        className="h-[161px] relative shrink-0 w-[596px]" 
-        data-name="image 79"
+      <motion.div
+        className={titleWrapperClass}
+        data-name={titleDataName}
         animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: rotateDelay }}
       >
-        <img alt="Mirror Moves" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage79} />
+        <img
+          alt={titleAlt}
+          className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
+          src={titleImg}
+        />
       </motion.div>
-      <div className="h-[337px] relative shrink-0 w-[618px]" data-name="image 80">
-        <img alt="Mirror Moves illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage80} />
+      <div className={`${mediaWrapperClass}`} data-name={mediaDataName}>
+        <video
+          ref={(node) => registerVideoRef(id, node)}
+          className="absolute inset-0 size-full object-cover"
+          playsInline
+          preload="metadata"
+          poster={posterImg}
+          controls={false}
+          onPlay={() => handleVideoPlay(id)}
+          onEnded={() => handleVideoEnded(id)}
+        >
+          <source src={videoSrc} type="video/mp4" />
+          Your browser does not support inline video playback.
+        </video>
       </div>
     </motion.div>
   );
 }
 
-function Item4() {
-  return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-0 top-[1389px] w-[646px]" 
-      data-name="Item 5"
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 1.0 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="h-[161px] relative shrink-0 w-[679px]" 
-        data-name="image 77"
-        animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1.3 }}
-      >
-        <img alt="Silent Dance Challenge" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage77} />
-      </motion.div>
-      <div className="aspect-[1244/680] relative shrink-0 w-full" data-name="image 78">
-        <img alt="Silent Dance Challenge illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage78} />
-      </div>
-    </motion.div>
-  );
-}
+type ContentProps = {
+  activeIndex: number | null;
+  registerVideoRef: (index: number, element: HTMLVideoElement | null) => void;
+  handleVideoPlay: (index: number) => void;
+  handleVideoEnded: (index: number) => void;
+};
 
-function Item3() {
-  return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-[766px] top-[797px] w-[649px]" 
-      data-name="Item 4"
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.8 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="h-[161px] relative shrink-0 w-[670px]" 
-        data-name="image 75"
-        animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1.1 }}
-      >
-        <img alt="Stretch & Reach Combo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage75} />
-      </motion.div>
-      <div className="aspect-[1238/676] relative shrink-0 w-full" data-name="image 76">
-        <img alt="Stretch & Reach Combo illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage76} />
-      </div>
-    </motion.div>
-  );
-}
-
-function Item2() {
-  return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-[12px] top-[772px] w-[624px]" 
-      data-name="Item 3"
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.6 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="h-[161px] relative shrink-0 w-[596px]" 
-        data-name="image 73"
-        animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.9 }}
-      >
-        <img alt="Shake It Out" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage73} />
-      </motion.div>
-      <div className="h-[340px] relative shrink-0 w-[624px]" data-name="image 74">
-        <img alt="Shake It Out illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage74} />
-      </div>
-    </motion.div>
-  );
-}
-
-function Item1() {
-  return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-[773px] top-[191px] w-[637px]" 
-      data-name="Item 2"
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.4 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="h-[157px] relative shrink-0 w-[544px]" 
-        data-name="image 71"
-        animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.7 }}
-      >
-        <img alt="Brain Boost" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage71} />
-      </motion.div>
-      <div className="h-[333px] relative shrink-0 w-[637px]" data-name="image 72">
-        <img alt="Brain Boost illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage72} />
-      </div>
-    </motion.div>
-  );
-}
-
-function Item() {
-  return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col gap-[16px] items-center left-[7px] top-[152px] w-[629px]" 
-      data-name="Item 1"
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="h-[161px] relative shrink-0 w-[609.5px]" 
-        data-name="image 69"
-        animate={{ rotate: [-2, 2, -2] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-      >
-        <img alt="Pray in the Holy Ghost" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage69} />
-      </motion.div>
-      <div className="h-[343px] relative shrink-0 w-[629px]" data-name="image 70">
-        <img alt="Pray in the Holy Ghost illustration" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage70} />
-      </div>
-    </motion.div>
-  );
-}
-
-function Content() {
+function Content({ activeIndex, registerVideoRef, handleVideoPlay, handleVideoEnded }: ContentProps) {
   return (
     <div className="absolute h-[2138px] left-[196px] top-[141px] w-[1415px]" data-name="Content">
-      <motion.div 
-        className="absolute h-[160.5px] left-[16px] top-[1988px] w-[1382px]" 
+      <motion.div
+        className="absolute h-[160.5px] left-[16px] top-[1988px] w-[1382px]"
         data-name="image 81"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -180,14 +225,18 @@ function Content() {
       >
         <img alt="Call to action text" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage81} />
       </motion.div>
-      <Item5 />
-      <Item4 />
-      <Item3 />
-      <Item2 />
-      <Item1 />
-      <Item />
-      <motion.div 
-        className="absolute h-[100.5px] left-[145px] top-[9.5px] w-[1107.5px]" 
+      {WIGGLE_ITEMS.map((entry) => (
+        <WiggleItem
+          key={entry.id}
+          {...entry}
+          activeIndex={activeIndex}
+          registerVideoRef={registerVideoRef}
+          handleVideoPlay={handleVideoPlay}
+          handleVideoEnded={handleVideoEnded}
+        />
+      ))}
+      <motion.div
+        className="absolute h-[100.5px] left-[145px] top-[9.5px] w-[1107.5px]"
         data-name="image 68"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -208,94 +257,119 @@ function Pagination() {
 }
 
 export default function Page13() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const endingAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voiceoverContent = `Here are some wiggle break ideas for you:
+  const registerVideoRef = useCallback((index: number, element: HTMLVideoElement | null) => {
+    videoRefs.current[index] = element;
+  }, []);
 
-PRAY IN THE HOLY GHOST:
-Speak in tongues fervently and pace on the spot.
+  const stopOtherVideos = useCallback((currentIndex: number) => {
+    videoRefs.current.forEach((video, idx) => {
+      if (idx !== currentIndex && video) {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+  }, []);
 
-BRAIN BOOST:
-Jog in place behind your chair for 30 seconds
+  const resetEndingAudio = useCallback(() => {
+    if (!endingAudioRef.current) return;
+    endingAudioRef.current.pause();
+    endingAudioRef.current.currentTime = 0;
+  }, []);
 
-SHAKE IT OUT:
-Shake each arm and leg 5 times, then repeat in descending order.
+  const playEndingAudio = useCallback(() => {
+    resetEndingAudio();
+    if (!endingAudioRef.current) return;
+    endingAudioRef.current.play().catch((err) => {
+      console.warn("Unable to play wiggle ending audio", err);
+    });
+  }, [resetEndingAudio]);
 
-STRETCH & REACH COMBO:
-Reach for the stars, stretch to the side like a rainbow, and touch your toes like you dropped your pencil.
+  const playVideoAtIndex = useCallback(
+    async (index: number) => {
+      const video = videoRefs.current[index];
+      if (!video) return;
 
-SILENT DANCE CHALLENGE:
-Dance to music but with no noise! Can you stay in silent mode?
+      stopOtherVideos(index);
+      resetEndingAudio();
 
-MIRROR MOVES:
-Copy a partner's slow, awesome movements like you're a human mirror.
+      try {
+        video.currentTime = 0;
+        await video.play();
+        setActiveIndex(index);
+      } catch (err) {
+        console.warn(`Auto-play blocked for Wiggle video ${index + 1}`, err);
+      }
+    },
+    [resetEndingAudio, stopOtherVideos]
+  );
 
-Even adults sometimes need wiggle breaks, too! So, the next time you're feeling squirmy, ask: Can I take a brain-boosting wiggle break?`;
+  const handleVideoPlay = useCallback(
+    (index: number) => {
+      stopOtherVideos(index);
+      resetEndingAudio();
+      setActiveIndex(index);
+    },
+    [resetEndingAudio, stopOtherVideos]
+  );
 
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'female',
-    autoplay: true,
-    delay: 1500,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
+  const handleVideoEnded = useCallback(
+    (index: number) => {
+      const nextIndex = index + 1;
+      if (nextIndex < WIGGLE_ITEMS.length) {
+        playVideoAtIndex(nextIndex);
+      } else {
+        setActiveIndex(null);
+        playEndingAudio();
+      }
+    },
+    [playEndingAudio, playVideoAtIndex]
+  );
 
   useEffect(() => {
-    audioRef.current = new Audio();
-    audioRef.current.addEventListener('ended', () => setIsPlaying(false));
-
+    endingAudioRef.current = new Audio(wiggleEndingAudio);
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', () => setIsPlaying(false));
+      if (endingAudioRef.current) {
+        endingAudioRef.current.pause();
+        endingAudioRef.current = null;
       }
     };
   }, []);
 
-  const toggleAudio = () => {
-    if (isPlaying) {
-      pauseVoiceover();
-      setIsPlaying(false);
-    } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
-        setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
-      }
-    }
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      playVideoAtIndex(0);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [playVideoAtIndex]);
+
+  useEffect(() => {
+    return () => {
+      videoRefs.current.forEach((video) => {
+        if (video) {
+          video.pause();
+        }
+      });
+      resetEndingAudio();
+    };
+  }, [resetEndingAudio]);
 
   return (
-    <>
-      <div className="bg-white relative size-full" data-name="13">
-        <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 67">
-          <img alt="Background" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage67} />
-        </div>
-        <Content />
-        <Pagination />
+    <div className="bg-white relative size-full" data-name="13">
+      <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 67">
+        <img alt="Background" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage67} />
       </div>
-
-      {/* Voiceover Control Button */}
-      <motion.button
-        onClick={toggleAudio}
-        className="fixed bottom-32 right-8 z-50 pointer-events-auto bg-gradient-to-br from-purple-600 to-pink-600 text-white p-6 rounded-full shadow-2xl hover:scale-110 transition-transform border-4 border-white"
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 1.5 }}
-        whileHover={{ scale: 1.15 }}
-        whileTap={{ scale: 0.95 }}
-        title={isPlaying ? "Stop voiceover" : "Play voiceover"}
-      >
-        {isPlaying ? (
-          <VolumeX className="w-10 h-10" />
-        ) : (
-          <Volume2 className="w-10 h-10" />
-        )}
-      </motion.button>
-    </>
+      <Content
+        activeIndex={activeIndex}
+        registerVideoRef={registerVideoRef}
+        handleVideoPlay={handleVideoPlay}
+        handleVideoEnded={handleVideoEnded}
+      />
+      <Pagination />
+    </div>
   );
 }

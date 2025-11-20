@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import { Volume2, VolumeX } from 'lucide-react';
 import imgImage3 from "figma:asset/077f50d75bad6d10f266c672135a632c51ba433f.png";
 import imgImage4 from "figma:asset/8b853ca6144d42e89f7502c9af67ac8cc7d133e0.png";
@@ -11,6 +10,7 @@ import imgHeaderImage from "figma:asset/bb8ab411824655a368f3203481bd25edb6004013
 import imgBg from "figma:asset/4d7556aadc2e584b5e524ad9cf1aa11a4861756e.png";
 import imgImage33 from "figma:asset/d2c122ae2c8f37d3b358b0a09f36af9108f84716.png";
 import imgImage32 from "figma:asset/5516304de5b20874ac7ba540d29b648e510ef835.png";
+import pageAudio from '../../assets/P8.mp3';
 
 function Frame1() {
   return (
@@ -137,43 +137,55 @@ function Pagination() {
 
 export default function Page8() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voiceoverContent = `Healing, hope and smiles everywhere.
-The Healing Streams Kids movement is changing lives.
+  useEffect(() => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
 
-Something amazing is happening, and kids are leading the way! The Healing Streams Live Healing Services has done incredible things since its inception. Healing sicknesses that seemed impossible, making hurt bodies strong again, and changing lives with the power of God's Word.
+    audio.volume = 1;
 
-In this Year of Completeness, like never before, children have taken their place at the forefront of the unstoppable healing movement sweeping the nations through Kidspiration. 
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
 
-Armed with their copies of the Healing to the Nations Magazine for Kids and the 4Ps list—Pray, Publicize, Penetrate places and languages, and Partner—these young heroes have been on an exciting adventure, sharing the full gospel of healing in Christ Jesus with children everywhere! Magazines in hand, they've taken God's healing power to schools, streets, villages, hospitals, orphanages, malls, and more!`;
-
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'female',
-    autoplay: true,
-    delay: 1500,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
-  const toggleAudio = () => {
-    // Toggle to pause/resume rather than stop
-    if (isPlaying) {
-      pauseVoiceover();
-      setIsPlaying(false);
-    } else {
-      // If paused, resume. Otherwise start fresh.
-      if ((window.speechSynthesis && window.speechSynthesis.paused)) {
-        resumeVoiceover();
+    const timer = window.setTimeout(async () => {
+      try {
+        await audio.play();
         setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Page 8 narration auto-play blocked', err);
       }
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  const toggleAudio = async () => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused && isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.warn('Unable to play Page 8 narration', err);
     }
   };
 
   return (
     <>
+      <audio ref={narrationAudioRef} src={pageAudio} preload="auto" />
       {/* Main Page Content */}
       <div className="relative size-full" data-name="8">
         <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="BG">

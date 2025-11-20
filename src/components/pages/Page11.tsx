@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import { Volume2, VolumeX } from 'lucide-react';
 import imgImage48 from "figma:asset/ef207e248b9df10b4617704e657ebb01660268c5.png";
 import imgImage47 from "figma:asset/14e8b4bcf41b23ffaf589301cfedf891aceb877b.png";
@@ -11,6 +10,7 @@ import imgImage41 from "figma:asset/47c75d898293064e22e44c1af1108471ea8021ed.png
 import imgImage42 from "figma:asset/046fb4de35ebb1439e31844d62ca75da526cd75f.png";
 import imgImage44 from "figma:asset/89c055e7973811c8c4928bd973ceb4a15a44cff6.png";
 import imgImage43 from "figma:asset/a8c7d68ec00cf7a306a8db0e2c26f696bb8e4fc5.png";
+import narrationAudio from '../../assets/P11.mp3';
 
 function Item() {
   return (
@@ -88,40 +88,55 @@ function Pagination() {
 
 export default function Page11() {
   const [isPlaying, setIsPlaying] = useState(false);
-  
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voiceoverContent = `Guess what! The very next day, while undergoing tests in the new hospital he had been flown into that morning, Dennis suddenly began to speak and moved his right arm and leg, something doctors said was impossible! Everyone was stunned. It was a miracle!
+  useEffect(() => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
 
-Today, Dennis is back in school, running, playing, smiling, and talking just like before!
+    audio.volume = 1;
 
-Lesson: Dennis's story reminds us that with God, nothing is impossible. When we believe and pray, miracles happen!`;
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
 
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'male',
-    autoplay: true,
-    delay: 1500,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
-
-  const toggleAudio = () => {
-    if (isPlaying) {
-      pauseVoiceover();
-      setIsPlaying(false);
-    } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
+    const timer = window.setTimeout(async () => {
+      try {
+        await audio.play();
         setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Page 11 narration auto-play blocked', err);
       }
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  const toggleAudio = async () => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused && isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.warn('Unable to play Page 11 narration', err);
     }
   };
 
   return (
     <>
+      <audio ref={narrationAudioRef} src={narrationAudio} preload="auto" />
       {/* Main Page Content */}
       <div className="bg-white relative size-full" data-name="11">
         <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 49">

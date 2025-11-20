@@ -1,61 +1,65 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, X } from 'lucide-react';
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { motion } from "motion/react";
+import { Play, Pause } from "lucide-react";
 import svgPaths from "../../imports/svg-r37e3lqi43";
 import imgBg from "figma:asset/2b413809168f2a8f44334a5f662eff90d7c97ee4.png";
+import imgTitle1 from "figma:asset/aa97184b78cc19a8201b076de18714abb5e92a4a.png";
+import imgJesusHealsTheCrippledWoman1 from "figma:asset/58fd468a5dcfe4e0a04933d719da8770b8f5fa9f.png";
+import comicVideoOne from "../../assets/comic 1.mp4";
+import comicVideoTwo from "../../assets/comic 2.mp4";
 
-function Comic({ 
-  isVisible, 
-  panelId,
-  videoSrc,
-  videoRef,
-  isPlaying
-}: { 
-  isVisible: boolean; 
-  panelId: number;
-  videoSrc: string;
-  videoRef: React.RefObject<HTMLVideoElement>;
-  isPlaying: boolean;
-}) {
+function TitleHeader() {
   return (
-    <motion.div 
-      className="absolute content-stretch flex flex-col items-start left-[calc(50%-0.5px)] top-[588px] translate-x-[-50%]" 
-      data-name={`Comic ${panelId}`}
-      initial={{ opacity: 0, y: 40 }}
-      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-    >
-      {/* Comic panel with video */}
-      <motion.div 
-        className="h-[790px] relative shrink-0 w-[1455px]" 
-        data-name="Video Panel"
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={isVisible ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <video 
-          ref={videoRef}
-          className="block max-w-none object-cover size-full" 
-          controlsList="nodownload" 
-          playsInline
+    <div className="absolute content-stretch flex gap-[132px] items-center left-[146px] top-[150.48px] z-10">
+      <div className="h-[340px] relative shrink-0 w-[649px]" data-name="Title 1">
+        <img alt="Title" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgTitle1} />
+      </div>
+      <div className="h-[372px] relative shrink-0 w-[675px]" data-name="Subtitle">
+        <img alt="Jesus Heals" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgJesusHealsTheCrippledWoman1} />
+      </div>
+    </div>
+  );
+}
+
+const PANEL_BUTTON_BASE = "rounded-2xl px-8 py-4 shadow-2xl transition-all flex items-center gap-3 text-white font-bold";
+
+type VideoPanelProps = {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  videoSrc: string;
+  panelId: number;
+  onTogglePlayback: (panelId: number) => void;
+  isPanelPlaying: boolean;
+  buttonGradient: string;
+};
+
+function VideoPanel({ videoRef, videoSrc, panelId, onTogglePlayback, isPanelPlaying, buttonGradient }: VideoPanelProps) {
+  return (
+    <div className="w-full flex flex-col gap-4">
+      <div className="w-full flex justify-end">
+        <motion.button
+          onClick={() => onTogglePlayback(panelId)}
+          className={`${PANEL_BUTTON_BASE} bg-gradient-to-br ${buttonGradient}`}
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          aria-pressed={isPanelPlaying}
         >
-          <source src={videoSrc} />
+          {isPanelPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7" />}
+          <span>{isPanelPlaying ? "Pause Panel" : "Play"}</span>
+        </motion.button>
+      </div>
+
+      <div className="relative w-full border-[12px] border-white rounded-[48px] overflow-hidden shadow-[0_40px_120px_rgba(38,16,74,0.35)] bg-black/70">
+        <video
+          ref={videoRef}
+          className="block w-full h-auto"
+          preload="auto"
+          playsInline
+          controls={false}
+        >
+          <source src={videoSrc} type="video/mp4" />
         </video>
-        
-        {/* Playing indicator overlay */}
-        {isPlaying && (
-          <motion.div
-            className="absolute top-4 right-4 bg-red-600/90 text-white px-4 py-2 rounded-full flex items-center gap-2 shadow-lg"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-          >
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="font-bold">Playing</span>
-          </motion.div>
-        )}
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -75,168 +79,161 @@ function Frame1() {
   );
 }
 
+type StoryStage = "idle" | "video1" | "video2" | "finished";
+
 export default function Page4() {
-  const [currentPanel, setCurrentPanel] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentPlayingPanel, setCurrentPlayingPanel] = useState<number | null>(null);
-  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const videoOneRef = useRef<HTMLVideoElement | null>(null);
+  const videoTwoRef = useRef<HTMLVideoElement | null>(null);
+  const [isStoryPlaying, setIsStoryPlaying] = useState(false);
+  const [stage, setStage] = useState<StoryStage>("idle");
+  const [panelPlaying, setPanelPlaying] = useState<number | null>(null);
   const isMountedRef = useRef(true);
-  const timersRef = useRef<number[]>([]);
-  const video1Ref = useRef<HTMLVideoElement>(null);
-  const video2Ref = useRef<HTMLVideoElement>(null);
 
-  const playVideosSequentially = async () => {
-    if (isPlaying) {
-      // Stop playback
-      setIsPlaying(false);
-      setCurrentPlayingPanel(null);
-      if (video1Ref.current) {
-        video1Ref.current.pause();
-        video1Ref.current.currentTime = 0;
-      }
-      if (video2Ref.current) {
-        video2Ref.current.pause();
-        video2Ref.current.currentTime = 0;
-      }
-    } else {
-      // Start playback
-      setIsPlaying(true);
-      
-      // Reveal both panels
-      if (isMountedRef.current) {
-        setCurrentPanel(0);
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            setCurrentPanel(1);
-          }
-        }, 800);
-      }
-
-      // Play first video
-      if (video1Ref.current) {
-        setCurrentPlayingPanel(1);
-        video1Ref.current.currentTime = 0;
-        try {
-          await video1Ref.current.play();
-        } catch (error) {
-          console.error('Error playing video 1:', error);
-          setIsPlaying(false);
-          setCurrentPlayingPanel(null);
-        }
-      }
-    }
-  };
-
-  const handleVideo1Ended = async () => {
-    if (!isPlaying || !isMountedRef.current) return;
-    
-    // Play second video when first one ends
-    if (video2Ref.current) {
-      setCurrentPlayingPanel(2);
-      video2Ref.current.currentTime = 0;
-      try {
-        await video2Ref.current.play();
-      } catch (error) {
-        console.error('Error playing video 2:', error);
-        setIsPlaying(false);
-        setCurrentPlayingPanel(null);
-      }
-    }
-  };
-
-  const handleVideo2Ended = () => {
-    if (!isMountedRef.current) return;
-    
-    // Story complete
-    setIsPlaying(false);
-    setCurrentPlayingPanel(null);
-  };
-
-  // Set up video event listeners
   useEffect(() => {
-    const video1 = video1Ref.current;
-    const video2 = video2Ref.current;
-
-    if (video1) {
-      video1.addEventListener('ended', handleVideo1Ended);
-    }
-    if (video2) {
-      video2.addEventListener('ended', handleVideo2Ended);
-    }
-
-    return () => {
-      if (video1) {
-        video1.removeEventListener('ended', handleVideo1Ended);
-      }
-      if (video2) {
-        video2.removeEventListener('ended', handleVideo2Ended);
-      }
-    };
-  }, [isPlaying]);
-
-  // Check modal display on mount
-  useEffect(() => {
-    const hasSeenInstructions = localStorage.getItem('page4InstructionsSeen');
-    if (!hasSeenInstructions) {
-      // Show modal after a brief delay
-      const timer = window.setTimeout(() => {
-        if (isMountedRef.current) {
-          setShowInstructionModal(true);
-        }
-      }, 1500);
-      timersRef.current.push(timer);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  const handleDismissModal = () => {
-    setShowInstructionModal(false);
-    localStorage.setItem('page4InstructionsSeen', 'true');
-  };
-
-  // Sequential panel reveal on mount (if not playing)
-  useEffect(() => {
-    if (!isPlaying) {
-      const timer1 = window.setTimeout(() => {
-        if (isMountedRef.current) {
-          setCurrentPanel(0);
-        }
-      }, 600);
-      const timer2 = window.setTimeout(() => {
-        if (isMountedRef.current) {
-          setCurrentPanel(1);
-        }
-      }, 1800);
-      
-      timersRef.current.push(timer1, timer2);
-      
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-      };
-    }
-  }, [isPlaying]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    
     return () => {
       isMountedRef.current = false;
-      
-      // Clear all timers
-      timersRef.current.forEach(timer => clearTimeout(timer));
-      timersRef.current = [];
-      
-      // Pause videos
-      if (video1Ref.current) {
-        video1Ref.current.pause();
-      }
-      if (video2Ref.current) {
-        video2Ref.current.pause();
-      }
     };
   }, []);
+
+  const pauseAllVideos = () => {
+    videoOneRef.current?.pause();
+    videoTwoRef.current?.pause();
+  };
+
+  const playVideo = async (video: HTMLVideoElement | null, panelId: number) => {
+    if (!video) return;
+    try {
+      await video.play();
+      setIsStoryPlaying(true);
+      setPanelPlaying(panelId);
+    } catch (error) {
+      console.error("Unable to play video", error);
+      setIsStoryPlaying(false);
+      setPanelPlaying(null);
+    }
+  };
+
+  const handlePanelToggle = async (panelId: number) => {
+    setIsStoryPlaying(false);
+    setStage("idle");
+
+    if (panelPlaying === panelId) {
+      pauseAllVideos();
+      setPanelPlaying(null);
+      return;
+    }
+
+    pauseAllVideos();
+    const targetRef = panelId === 1 ? videoOneRef : videoTwoRef;
+    if (targetRef.current) {
+      targetRef.current.currentTime = 0;
+      try {
+        await targetRef.current.play();
+        setPanelPlaying(panelId);
+      } catch (error) {
+        console.error("Unable to play panel video", error);
+        setPanelPlaying(null);
+      }
+    }
+  };
+
+  const resetVideos = () => {
+    if (videoOneRef.current) {
+      videoOneRef.current.currentTime = 0;
+    }
+    if (videoTwoRef.current) {
+      videoTwoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleTogglePlayback = async () => {
+    if (isStoryPlaying) {
+      pauseAllVideos();
+      setIsStoryPlaying(false);
+      setPanelPlaying(null);
+      return;
+    }
+
+    resetVideos();
+
+    switch (stage) {
+      case "idle":
+        setStage("video1");
+        await playVideo(videoOneRef.current, 1);
+        break;
+      case "video1":
+        await playVideo(videoOneRef.current, 1);
+        break;
+      case "video2":
+        await playVideo(videoTwoRef.current, 2);
+        break;
+      case "finished":
+        setStage("video1");
+        await playVideo(videoOneRef.current, 1);
+        break;
+      default:
+        break;
+    }
+  };
+
+  useEffect(() => {
+    const videoOne = videoOneRef.current;
+    if (!videoOne) return;
+
+    const handleEnded = async () => {
+      if (!isMountedRef.current) return;
+
+      if (panelPlaying === 1) {
+        setPanelPlaying(null);
+      }
+
+      if (isStoryPlaying) {
+        setStage("video2");
+        if (videoTwoRef.current) {
+          videoTwoRef.current.currentTime = 0;
+          try {
+            await videoTwoRef.current.play();
+            setPanelPlaying(2);
+          } catch (error) {
+            console.error("Unable to start second video", error);
+            setIsStoryPlaying(false);
+            setPanelPlaying(null);
+          }
+        }
+      }
+    };
+
+    videoOne.addEventListener("ended", handleEnded);
+    return () => {
+      videoOne.removeEventListener("ended", handleEnded);
+    };
+  }, [isStoryPlaying, panelPlaying]);
+
+  useEffect(() => {
+    const videoTwo = videoTwoRef.current;
+    if (!videoTwo) return;
+
+    const handleEnded = () => {
+      if (!isMountedRef.current) return;
+
+      if (panelPlaying === 2) {
+        setPanelPlaying(null);
+      }
+
+      if (isStoryPlaying) {
+        setIsStoryPlaying(false);
+        setStage("finished");
+      }
+    };
+
+    videoTwo.addEventListener("ended", handleEnded);
+    return () => {
+      videoTwo.removeEventListener("ended", handleEnded);
+    };
+  }, [isStoryPlaying, panelPlaying]);
+
+  const buttonLabel = isStoryPlaying ? "PAUSE STORY" : stage === "finished" ? "PLAY AGAIN" : "PLAY FULL STORY";
+  const buttonIcon = isStoryPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />;
 
   return (
     <div className="bg-white relative size-full" data-name="4">
@@ -247,136 +244,47 @@ export default function Page4() {
         </div>
       </div>
       
-      {/* Two Comic panels with videos */}
-      <Comic 
-        isVisible={currentPanel !== null && currentPanel >= 0} 
-        panelId={1}
-        videoSrc="/_videos/v1/3569ce2b34dadfd78d8d2b336a0582c264b81304"
-        videoRef={video1Ref}
-        isPlaying={currentPlayingPanel === 1}
-      />
-      
-      <Comic 
-        isVisible={currentPanel !== null && currentPanel >= 1} 
-        panelId={2}
-        videoSrc="/_videos/v1/3569ce2b34dadfd78d8d2b336a0582c264b81304"
-        videoRef={video2Ref}
-        isPlaying={currentPlayingPanel === 2}
-      />
-      
-      <Frame1 />
+      <TitleHeader />
 
-      {/* Main Playback Control */}
-      <motion.div
-        className="absolute top-16 left-1/2 -translate-x-1/2 z-40"
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 0.6 }}
-      >
-        <motion.button
-          onClick={playVideosSequentially}
-          className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white rounded-full px-10 py-5 shadow-2xl transition-all flex items-center gap-4 border-4 border-white"
-          whileHover={{ scale: 1.08, rotate: 2 }}
-          whileTap={{ scale: 0.95 }}
-          animate={isPlaying ? {
-            boxShadow: [
-              "0 10px 40px rgba(251, 146, 60, 0.5)",
-              "0 10px 60px rgba(251, 146, 60, 0.8)",
-              "0 10px 40px rgba(251, 146, 60, 0.5)",
-            ],
-          } : {}}
-          transition={{
-            boxShadow: {
-              duration: 1.5,
-              repeat: isPlaying ? Infinity : 0,
-              ease: "easeInOut"
-            }
-          }}
+      {/* Comic videos stack */}
+      <div className="absolute left-1/2 top-[588px] translate-x-[-50%] w-[1455px] z-10 flex flex-col items-center gap-[3rem]">
+        <motion.div
+          className="w-full flex justify-center"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
         >
-          {isPlaying ? (
-            <>
-              <Pause className="w-8 h-8" />
-              <span className="text-2xl font-black">STOP STORY</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-8 h-8" />
-              <span className="text-2xl font-black">PLAY FULL STORY</span>
-            </>
-          )}
-        </motion.button>
-      </motion.div>
+          <motion.button
+            onClick={handleTogglePlayback}
+            className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white rounded-full px-12 py-5 shadow-[0_25px_60px_rgba(251,146,60,0.55)] border-4 border-white flex items-center gap-4 text-2xl font-black tracking-wide"
+            whileHover={{ scale: 1.05, rotate: 1 }}
+            whileTap={{ scale: 0.95 }}
+            aria-pressed={isStoryPlaying}
+          >
+            {buttonIcon}
+            <span>{buttonLabel}</span>
+          </motion.button>
+        </motion.div>
 
-      {/* Instruction Modal */}
-      <AnimatePresence>
-        {showInstructionModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleDismissModal}
-            />
-            
-            {/* Modal */}
-            <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 text-white p-16 rounded-[40px] shadow-2xl z-50 max-w-5xl w-[90%] border-8 border-yellow-400"
-              initial={{ opacity: 0, scale: 0.8, y: -50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 50 }}
-              transition={{ type: "spring", duration: 0.5 }}
-            >
-              {/* Close Button */}
-              <button
-                onClick={handleDismissModal}
-                className="absolute top-6 right-6 bg-red-500 hover:bg-red-600 rounded-full p-4 transition-colors shadow-lg"
-                aria-label="Close instructions"
-              >
-                <X className="w-10 h-10" />
-              </button>
+        <VideoPanel
+          videoRef={videoOneRef}
+          videoSrc={comicVideoOne}
+          panelId={1}
+          onTogglePlayback={handlePanelToggle}
+          isPanelPlaying={panelPlaying === 1}
+          buttonGradient="from-rose-500 to-pink-600"
+        />
+        <VideoPanel
+          videoRef={videoTwoRef}
+          videoSrc={comicVideoTwo}
+          panelId={2}
+          onTogglePlayback={handlePanelToggle}
+          isPanelPlaying={panelPlaying === 2}
+          buttonGradient="from-indigo-500 to-blue-600"
+        />
+      </div>
 
-              {/* Content */}
-              <div className="text-center space-y-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                >
-                  <h2 className="text-6xl font-black mb-4 text-yellow-300 leading-tight">🎬 How to Watch<br/>the Story</h2>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="space-y-6"
-                >
-                  <p className="text-3xl leading-relaxed font-semibold">
-                    Click <span className="font-black text-yellow-300 text-4xl bg-purple-950/50 px-4 py-2 rounded-xl inline-block">"PLAY FULL STORY"</span> to watch the videos play automatically with audio!
-                  </p>
-                  <p className="text-2xl text-purple-100 leading-relaxed font-medium">
-                    The videos will play one after another. Sit back and enjoy! 🎥
-                  </p>
-                </motion.div>
-
-                <motion.button
-                  onClick={handleDismissModal}
-                  className="mt-8 bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black text-3xl px-12 py-6 rounded-full transition-colors shadow-2xl"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  Got it! Let's Begin 🚀
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <Frame1 />
     </div>
   );
 }

@@ -1,24 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import { Paintbrush, Eraser, RotateCcw, Download, Check, Undo, Redo, GripVertical } from 'lucide-react';
 import svgPaths from "../../imports/svg-5ermehcl92";
 import imgVector from "figma:asset/b518399ed47884f4b4f9254a9986eb2916ba73fa.png";
 import imgHeaderColorMe1 from "figma:asset/12250fa234e313ca6b0482e9ff0cbea361eda008.png";
 import imgImage27 from "figma:asset/fea052f26c11aeec3b284255c89c87d1ec54a8ed.png";
+import voiceoverAudio from '../../assets/P7.mp3';
 
 const colorPalette = [
   { name: 'Red', color: '#FF0000' },
   { name: 'Orange', color: '#FF6B00' },
   { name: 'Yellow', color: '#FFFF00' },
-  { name: 'Green', color: '#00FF00' },
+  { name: 'Green', color: '#059605ff' },
   { name: 'Blue', color: '#0000FF' },
   { name: 'Purple', color: '#A020F0' },
   { name: 'Pink', color: '#FF69B4' },
-  { name: 'Brown', color: '#8B4513' },
+  { name: 'Brown', color: '#80451cff' },
   { name: 'Black', color: '#000000' },
   { name: 'Gray', color: '#808080' },
-  { name: 'Light Blue', color: '#ADD8E6' },
+  { name: 'Light Blue', color: '#a5e8ffff' },
   { name: 'Light Green', color: '#90EE90' },
   { name: 'Peach', color: '#FFDAB9' },
   { name: 'Tan', color: '#D2B48C' },
@@ -28,8 +28,8 @@ const CANVAS_STORAGE_KEY = 'page7-coloring-canvas';
 const MAX_HISTORY = 10;
 
 function Art({ baseCanvasRef, drawingCanvasRef, isDrawing, startDrawing, stopDrawing, draw }: {
-  baseCanvasRef: React.RefObject<HTMLCanvasElement>;
-  drawingCanvasRef: React.RefObject<HTMLCanvasElement>;
+  baseCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  drawingCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   isDrawing: boolean;
   startDrawing: (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => void;
   stopDrawing: () => void;
@@ -73,8 +73,8 @@ function Frame() {
 }
 
 function ColorMe({ baseCanvasRef, drawingCanvasRef, isDrawing, startDrawing, stopDrawing, draw }: {
-  baseCanvasRef: React.RefObject<HTMLCanvasElement>;
-  drawingCanvasRef: React.RefObject<HTMLCanvasElement>;
+  baseCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  drawingCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   isDrawing: boolean;
   startDrawing: (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => void;
   stopDrawing: () => void;
@@ -114,16 +114,8 @@ function Pagination() {
 export default function Page7() {
   const baseCanvasRef = useRef<HTMLCanvasElement>(null); // For base coloring image
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null); // For user's brush strokes
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voiceoverContent = `Let's color your artwork. Use the brush tool to paint on the artwork. You can use the eraser tool, to clean up errors.
-After you're done painting, click on the "Save" button to save your artwork to your device.`;
-
-  useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'female',
-    autoplay: true,
-    delay: 1500
-  });
   const [selectedColor, setSelectedColor] = useState('#FF0000');
   const [brushSize, setBrushSize] = useState(20);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -185,6 +177,25 @@ After you're done painting, click on the "Save" button to save your artwork to y
   useEffect(() => {
     return () => {
       saveCanvasToStorage();
+    };
+  }, []);
+
+  useEffect(() => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    audio.volume = 1;
+    const playTimer = window.setTimeout(async () => {
+      try {
+        await audio.play();
+      } catch (err) {
+        console.warn('Page 7 narration auto-play blocked', err);
+      }
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(playTimer);
+      audio.pause();
     };
   }, []);
 
@@ -367,8 +378,10 @@ After you're done painting, click on the "Save" button to save your artwork to y
     if (tool === 'eraser') {
       // Eraser only affects the drawing layer, not the base image
       drawingCtx.globalCompositeOperation = 'destination-out';
+      drawingCtx.globalAlpha = 1;
     } else {
       drawingCtx.globalCompositeOperation = 'source-over';
+      drawingCtx.globalAlpha = 0.1;
       drawingCtx.strokeStyle = selectedColor;
     }
 
@@ -410,6 +423,7 @@ After you're done painting, click on the "Save" button to save your artwork to y
 
   return (
     <>
+      <audio ref={narrationAudioRef} src={voiceoverAudio} preload="auto" />
       {/* Main Page - Inside Magazine Container */}
       <div className="relative size-full" data-name="7">
         <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 27">
@@ -439,7 +453,7 @@ After you're done painting, click on the "Save" button to save your artwork to y
           drag
           dragMomentum={false}
           dragElastic={0.05}
-          className="absolute left-4 top-20 pointer-events-auto cursor-grab active:cursor-grabbing"
+          className="absolute left-4 bottom-6 sm:bottom-8 lg:bottom-10 pointer-events-auto cursor-grab active:cursor-grabbing"
           initial={{ x: -300, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
@@ -491,7 +505,7 @@ After you're done painting, click on the "Save" button to save your artwork to y
           drag
           dragMomentum={false}
           dragElastic={0.05}
-          className="absolute right-4 top-20 pointer-events-auto cursor-grab active:cursor-grabbing"
+          className="absolute right-4 bottom-6 sm:bottom-8 lg:bottom-10 pointer-events-auto cursor-grab active:cursor-grabbing"
           initial={{ x: 300, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}

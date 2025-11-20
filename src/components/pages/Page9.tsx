@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import { Volume2, VolumeX } from 'lucide-react';
 import svgPaths from "../../imports/svg-2rgimnw3la";
 import img0J4A5782 from "figma:asset/6563420ec2f7e583faaeeecc11799ece96b1fb95.png";
 import imgImage35 from "figma:asset/32389039c068e804fd710d39e747a9adba7c0a24.png";
 import img1003194538 from "figma:asset/1742d8059b28151d4de31489569a7beabfa8730c.png";
 import img1003194535 from "figma:asset/a5b77e2818ec988a48ca02b106f131f56b395a9a.png";
-import img1000061762 from "figma:asset/3e53b923fe681dafd828b1ec28769be5e02ee7d2.png";
+import img1000061762 from "figma:asset/1742d8059b28151d4de31489569a7beabfa8730c.png";
 import imgKiddiesMagazineCoverPageMay3 from "figma:asset/0a8506d7a4858d807d480735680d60420b944f40.png";
 import img1000893181 from "../../assets/1742d8059b28151d4de31489569a7beabfa8730c.png";
 import imgImage4 from "../../assets/3e53b923fe681dafd828b1ec28769be5e02ee7d2.png";
@@ -16,6 +15,7 @@ import imgImage5 from "figma:asset/c3fcf8bf8f17a9d9b4248889deffbdf66d9fc330.png"
 import imgBg from "figma:asset/caa16e8d8a0e15a5b25985e4bb467e1dc0ed6349.png";
 import imgImage34 from "figma:asset/54c57a7128b8456203a2a1e1fc6215e485494d85.png";
 import { img1003194537 } from "../../imports/svg-divku";
+import narrationAudio from '../../assets/P9.mp3';
 
 function ImgGroup() {
   return (
@@ -222,40 +222,53 @@ function Pagination() {
 
 export default function Page9() {
   const [isPlaying, setIsPlaying] = useState(false);
-  
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voiceoverContent = `And the results? Simply amazing! The healing streams of God have surged worldwide, ridding children of numerous diseases, including cancerous growths, paralysis, brain injuries, autism, and so much more!
+  useEffect(() => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
 
-Even better, God's Word is reaching children's hearts, replacing fear, pain, and confusion with faith, peace, and hope.
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
 
-But there's still work to do! Every child deserves to live free from sickness, fear, and pain`;
-
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'female',
-    autoplay: true,
-    delay: 1500,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
-
-  const toggleAudio = () => {
-    if (isPlaying) {
-      pauseVoiceover();
-      setIsPlaying(false);
-    } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
+    const timer = window.setTimeout(async () => {
+      try {
+        await audio.play();
         setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Page 9 narration auto-play blocked', err);
       }
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  const toggleAudio = async () => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused && isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.warn('Unable to play Page 9 narration', err);
     }
   };
 
   return (
     <>
+      <audio ref={narrationAudioRef} src={narrationAudio} preload="auto" />
       {/* Main Page Content */}
       <div className="bg-white relative size-full" data-name="9">
         <div className="absolute h-[2480px] left-0 top-0 w-[1755px]" data-name="BG">

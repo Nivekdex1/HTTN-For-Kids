@@ -1,10 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Volume2, VolumeX, X, Trophy, Star, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+import { X, Trophy, Star, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
 import imgImage97 from "figma:asset/67ab80fb00be230c929c88a75ce44a10c7b45708.png";
 import imgImage98 from "figma:asset/792cb1fc6bf19941c372dfe6c4d0035bb69d35d5.png";
 import imgImage99 from "figma:asset/8369d8dca6173b53d65e9cb99c1431570d0ab9b2.png";
-import { useVoiceover } from '../../utils/useVoiceover';
+import qAudio1 from "../../assets/15-1.mp3";
+import qAudio2 from "../../assets/15-2.mp3";
+import qAudio3 from "../../assets/15-3.mp3";
+import qAudio4 from "../../assets/15-4.mp3";
+import qAudio5 from "../../assets/15-5.mp3";
+import qAudio6 from "../../assets/15-6.mp3";
+import qAudio7 from "../../assets/15-7.mp3";
+import qAudio8 from "../../assets/15-8.mp3";
+import qAudio9 from "../../assets/15-9.mp3";
+import qAudio10 from "../../assets/15-10.mp3";
+import correctAudioSrc from "../../assets/15-correct.mp3";
+import wrongAudioSrc from "../../assets/15-wrong.mp3";
 
 interface Question {
   id: number;
@@ -85,6 +96,19 @@ const quizQuestions: Question[] = [
     correctAnswer: "Hebrews",
     voiceover: "What is the 17th book of the New Testament?"
   },
+];
+
+const questionAudioSources = [
+  qAudio1,
+  qAudio2,
+  qAudio3,
+  qAudio4,
+  qAudio5,
+  qAudio6,
+  qAudio7,
+  qAudio8,
+  qAudio9,
+  qAudio10,
 ];
 
 function ScoreModal({ score, total, onClose, onRetake }: { score: number; total: number; onClose: () => void; onRetake: () => void }) {
@@ -251,46 +275,96 @@ export default function Page15() {
   const [showScore, setShowScore] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const questionAudioRefs = useRef<HTMLAudioElement[]>([]);
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentQuestion = quizQuestions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quizQuestions.length) * 100;
-
-  useEffect(() => {
-    audioRef.current = new Audio();
-    audioRef.current.addEventListener('ended', () => setIsPlaying(false));
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', () => setIsPlaying(false));
-      }
-    };
+  const stopAllQuestionAudio = useCallback(() => {
+    questionAudioRefs.current.forEach((audio) => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
   }, []);
 
-  // Use centralized TTS hook
-  const voiceoverText = currentQuestion.voiceover;
-  const { playVoiceover, stopVoiceover } = useVoiceover({
-    content: voiceoverText,
-    voiceGender: 'female',
-    autoplay: false,
-    delay: 0,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
+  const stopFeedbackAudio = useCallback(() => {
+    if (correctAudioRef.current) {
+      correctAudioRef.current.pause();
+      correctAudioRef.current.currentTime = 0;
+    }
+    if (wrongAudioRef.current) {
+      wrongAudioRef.current.pause();
+      wrongAudioRef.current.currentTime = 0;
+    }
+  }, []);
 
-  // Auto-play voiceover when question changes
+  const playQuestionAudio = useCallback(
+    async (index: number) => {
+      const audio = questionAudioRefs.current[index];
+      if (!audio) return;
+
+      stopAllQuestionAudio();
+      try {
+        audio.currentTime = 0;
+        await audio.play();
+      } catch (err) {
+        console.warn(`Unable to play quiz question audio ${index + 1}`, err);
+      }
+    },
+    [stopAllQuestionAudio]
+  );
+
+  const playFeedbackSound = useCallback(
+    (correct: boolean) => {
+      const target = correct ? correctAudioRef.current : wrongAudioRef.current;
+      if (!target) return;
+
+      stopFeedbackAudio();
+      target.currentTime = 0;
+      target.play().catch((err) => {
+        console.warn(
+          correct ? 'Unable to play correct answer audio' : 'Unable to play wrong answer audio',
+          err
+        );
+      });
+    },
+    [stopFeedbackAudio]
+  );
+
   useEffect(() => {
+    questionAudioRefs.current = questionAudioSources.map((src) => {
+      const audio = new Audio(src);
+      audio.preload = 'auto';
+      return audio;
+    });
+
+    correctAudioRef.current = new Audio(correctAudioSrc);
+    correctAudioRef.current.preload = 'auto';
+    wrongAudioRef.current = new Audio(wrongAudioSrc);
+    wrongAudioRef.current.preload = 'auto';
+
+    return () => {
+      stopAllQuestionAudio();
+      stopFeedbackAudio();
+      questionAudioRefs.current = [];
+      correctAudioRef.current = null;
+      wrongAudioRef.current = null;
+    };
+  }, [stopAllQuestionAudio, stopFeedbackAudio]);
+
+  useEffect(() => {
+    stopFeedbackAudio();
+    stopAllQuestionAudio();
+
     const timer = setTimeout(() => {
-      playVoiceover();
-    }, 600); // Delay to let animation complete
+      playQuestionAudio(currentQuestionIndex);
+    }, 600);
 
     return () => {
       clearTimeout(timer);
-      stopVoiceover();
     };
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, playQuestionAudio, stopAllQuestionAudio, stopFeedbackAudio]);
 
   const handleAnswer = (answer: string) => {
     if (selectedAnswer) return; // Already answered
@@ -301,9 +375,13 @@ export default function Page15() {
 
     // Save answer
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: answer }));
+
+    stopAllQuestionAudio();
+    playFeedbackSound(correct);
   };
 
   const handleNext = () => {
+    stopFeedbackAudio();
     if (currentQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer(null);
@@ -311,11 +389,13 @@ export default function Page15() {
     } else {
       // Quiz completed
       setShowScore(true);
+      stopAllQuestionAudio();
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
+      stopFeedbackAudio();
       setCurrentQuestionIndex(prev => prev - 1);
       setSelectedAnswer(null);
       setIsCorrect(null);
@@ -333,32 +413,13 @@ export default function Page15() {
   };
 
   const handleRetake = () => {
+    stopFeedbackAudio();
+    stopAllQuestionAudio();
     setAnswers({});
     setShowScore(false);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setIsCorrect(null);
-  };
-
-  const toggleAudio = () => {
-    if (isPlaying) {
-      // pause if speaking
-      if (window.speechSynthesis && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        window.speechSynthesis.pause();
-        setIsPlaying(false);
-      } else {
-        stopVoiceover();
-        setIsPlaying(false);
-      }
-    } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-        setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
-      }
-    }
   };
 
   return (
@@ -548,24 +609,6 @@ export default function Page15() {
           />
         )}
       </AnimatePresence>
-
-      {/* Voiceover Control Button */}
-      <motion.button
-        onClick={toggleAudio}
-        className="fixed bottom-32 right-8 z-50 pointer-events-auto bg-gradient-to-br from-purple-600 to-pink-600 text-white p-6 rounded-full shadow-2xl hover:scale-110 transition-transform border-4 border-white"
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 1.5 }}
-        whileHover={{ scale: 1.15 }}
-        whileTap={{ scale: 0.95 }}
-        title={isPlaying ? "Stop voiceover" : "Play voiceover"}
-      >
-        {isPlaying ? (
-          <VolumeX className="w-10 h-10" />
-        ) : (
-          <Volume2 className="w-10 h-10" />
-        )}
-      </motion.button>
     </>
   );
 }

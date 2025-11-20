@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { Volume2, VolumeX } from 'lucide-react';
-import { useVoiceover } from '../../utils/useVoiceover';
+import { Play, Pause } from 'lucide-react';
 import imgImage87 from "figma:asset/f4669213b1a03072a4222c1b49443d8823f4f685.png";
 import imgConfessions1 from "figma:asset/0999da21d5b0674cf61c08029c8dde05f50b980f.png";
 import imgImage86 from "figma:asset/b480c6921381f3d320a4b17465d4f04652e550d0.png";
@@ -14,6 +13,14 @@ import imgImage91 from "figma:asset/13cc90b6c7bda1e850d5c6a83de8bc767d0960a5.png
 import imgImage90 from "figma:asset/3200f217847e8060a4991016c3d67b00f1e10161.png";
 import imgImage89 from "figma:asset/809115b27122cf147522da14f9f8a0b06f7c3fba.png";
 import imgImage88 from "figma:asset/ff544e7e33b417e21f3ed0327413d1543fe9c691.png";
+import confAudio1 from "../../assets/conf-1.mp3";
+import confAudio2 from "../../assets/conf-2.mp3";
+import confAudio3 from "../../assets/conf-3.mp3";
+import confAudio4 from "../../assets/conf-4.mp3";
+import confAudio5 from "../../assets/conf-5.mp3";
+import confAudio6 from "../../assets/conf-6.mp3";
+import confAudio7 from "../../assets/conf-7.mp3";
+import confAudio8 from "../../assets/conf-8.mp3";
 
 function HeaderText() {
   return (
@@ -131,65 +138,120 @@ const confessionPositions = [
   { left: 171, top: 1953, width: 1431, height: 165 },
 ];
 
+const confessionAudioSources = [
+  confAudio1,
+  confAudio2,
+  confAudio3,
+  confAudio4,
+  confAudio5,
+  confAudio6,
+  confAudio7,
+  confAudio8,
+];
+
+const TOTAL_CONFESSIONS = confessionAudioSources.length;
+
 export default function Page14() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentConfessionIndex, setCurrentConfessionIndex] = useState(-1);
+  const [autoplayAttempted, setAutoplayAttempted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentIndexRef = useRef(-1);
 
-  // Speak each confession individually so we can sync animations
-  const currentContent = currentConfessionIndex >= 0 ? confessions[currentConfessionIndex].text : '';
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: currentContent,
-    voiceGender: 'male',
-    autoplay: false,
-    delay: 0,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => {
-      // move to next confession or stop
-      setCurrentConfessionIndex((prev) => {
-        const next = prev + 1;
-        if (next < confessions.length) {
-          return next;
-        }
-        // finished
-        setIsPlaying(false);
-        return -1;
-      });
+  const resetSequence = useCallback(() => {
+    setIsPlaying(false);
+    setCurrentConfessionIndex(-1);
+    currentIndexRef.current = -1;
+  }, []);
+
+  const playConfession = useCallback(
+    async (index: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      currentIndexRef.current = index;
+      setCurrentConfessionIndex(index);
+
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = confessionAudioSources[index];
+
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn(`Unable to play confession audio ${index + 1}`, err);
+      }
+    },
+    []
+  );
+
+  const resumeConfession = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.warn('Unable to resume confession audio', err);
     }
-  });
+  }, []);
 
-  // When the currentConfessionIndex changes, if we're in playing mode, trigger playback
   useEffect(() => {
-    if (currentConfessionIndex >= 0 && isPlaying) {
-      // Slight delay to allow animation to settle
-      const t = setTimeout(() => {
-        playVoiceover();
-      }, 250);
-      return () => clearTimeout(t);
-    }
-    return;
-  }, [currentConfessionIndex, isPlaying, playVoiceover]);
+    const audio = new Audio();
+    audio.preload = 'auto';
 
-  const toggleAudio = () => {
+    const handleEnded = () => {
+      const nextIndex = currentIndexRef.current + 1;
+      if (nextIndex < TOTAL_CONFESSIONS) {
+        playConfession(nextIndex);
+      } else {
+        resetSequence();
+      }
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audioRef.current = audio;
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.currentTime = 0;
+      audioRef.current = null;
+    };
+  }, [playConfession, resetSequence]);
+
+  useEffect(() => {
+    if (autoplayAttempted) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await playConfession(0);
+        setAutoplayAttempted(true);
+      } catch (err) {
+        console.warn('Autoplay blocked for confession audio', err);
+        setAutoplayAttempted(true);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [autoplayAttempted, playConfession]);
+
+  const toggleAudio = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (isPlaying) {
-      // pause the current utterance instead of stopping so it's a mute-like action
-      if (window.speechSynthesis && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        pauseVoiceover();
-        setIsPlaying(false);
-      } else {
-        // fallback to stop
-        stopVoiceover();
-        setIsPlaying(false);
-        setCurrentConfessionIndex(-1);
-      }
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    if (currentConfessionIndex === -1) {
+      playConfession(0);
     } else {
-      // If paused, resume; otherwise start from first confession
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
-        setIsPlaying(true);
-      } else {
-        setCurrentConfessionIndex(0);
-        setIsPlaying(true);
-      }
+      resumeConfession();
     }
   };
 
@@ -241,12 +303,12 @@ export default function Page14() {
         transition={{ duration: 0.5, delay: 1.5 }}
         whileHover={{ scale: 1.15 }}
         whileTap={{ scale: 0.95 }}
-        title={isPlaying ? "Stop voiceover" : "Play voiceover"}
+        title={isPlaying ? "Pause confessions" : "Play confessions"}
       >
         {isPlaying ? (
-          <VolumeX className="w-10 h-10" />
+          <Pause className="w-10 h-10" />
         ) : (
-          <Volume2 className="w-10 h-10" />
+          <Play className="w-10 h-10" />
         )}
       </motion.button>
     </>

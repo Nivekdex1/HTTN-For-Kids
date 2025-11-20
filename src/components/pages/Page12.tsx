@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useVoiceover } from '../../utils/useVoiceover';
 import { Volume2, VolumeX } from 'lucide-react';
 import imgImage60 from "figma:asset/cce620129696b4e7a10551c700fd539282d4e6a2.png";
 import imgImage61 from "figma:asset/4c23e7b30869ae3eba2a034e3450df93a0e36081.png";
@@ -19,6 +18,7 @@ import imgImage54 from "figma:asset/17b257e4e42194839fef4b3093ac4562a6a9bcf3.png
 import imgImage51 from "figma:asset/acff0ca1afee7f962034040c0e8189707a6a368f.png";
 import imgImage50 from "figma:asset/301ee4711c8359e7b1525cf98eca25e32145d656.png";
 import imgImage55 from "figma:asset/4e848b9624772139c5fa31bc4fec4491e44e5b9b.png";
+import narrationAudio from '../../assets/P12.mp3';
 
 function Frame4() {
   return (
@@ -330,53 +330,55 @@ function Pagination() {
 
 export default function Page12() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const voiceoverContent = `Healthy living for winners:
-
-Hey there Champs, Did you know that your body and spirit love to move, even when you're learning, meditating, or indoors all day? When you sit too long, your brain gets sleepy, and the wiggles build up like popcorn ready to pop! That's why wiggle breaks are important. They help you:
-
-Stay focused, feel energized, keep your body strong and have a little fun learning. Wiggle breaks aren't just fun, they are great for your body and brain. They boost blood flow and keep your heart strong, they help you focus, remember and learn faster, they release feel-good chemicals that fight stress. Also, moving through the day helps you rest better at night.`;
-
-  const { playVoiceover, stopVoiceover, pauseVoiceover, resumeVoiceover } = useVoiceover({
-    content: voiceoverContent,
-    voiceGender: 'female',
-    autoplay: true,
-    delay: 1500,
-    onStart: () => setIsPlaying(true),
-    onEnd: () => setIsPlaying(false),
-  });
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Keep audioRef for future pre-recorded audio support; not used for TTS toggling
-    audioRef.current = new Audio();
-    audioRef.current.addEventListener('ended', () => setIsPlaying(false));
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    audio.volume = 1;
+
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Page 12 narration auto-play blocked', err);
+      }
+    }, 1500);
 
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', () => setIsPlaying(false));
-      }
+      window.clearTimeout(timer);
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.currentTime = 0;
     };
   }, []);
 
-  const toggleAudio = () => {
-    if (isPlaying) {
-      pauseVoiceover();
+  const toggleAudio = async () => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused && isPlaying) {
+      audio.pause();
       setIsPlaying(false);
-    } else {
-      if (window.speechSynthesis && window.speechSynthesis.paused) {
-        resumeVoiceover();
-        setIsPlaying(true);
-      } else {
-        playVoiceover();
-        setIsPlaying(true);
-      }
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.warn('Unable to play Page 12 narration', err);
     }
   };
 
   return (
     <>
+      <audio ref={narrationAudioRef} src={narrationAudio} preload="auto" />
       {/* Main Page Content */}
       <div className="bg-white relative size-full" data-name="12">
         <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 50">
