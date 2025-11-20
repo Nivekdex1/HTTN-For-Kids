@@ -1,7 +1,7 @@
 
-  # Interactive Kids Magazine Webapp
+  # Interactive Healing to the Nations Kids Magazine Webapp
 
-  This is a code bundle for Interactive Kids Magazine Webapp. The original project is available at https://www.figma.com/design/TG0igmFJLuJamTYGfG3zlo/Interactive-Kids-Magazine-Webapp.
+  This is a code bundle for HTTN Kids Magazine Webapp. The original project is available at https://www.figma.com/design/TG0igmFJLuJamTYGfG3zlo/Interactive-Kids-Magazine-Webapp.
 
   ## Running the code
 
