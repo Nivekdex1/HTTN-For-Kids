@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import imgLogo from 'figma:asset/2f881615ac1cd9aa71d59f5da7d7ee06972ab3f1.png';
+import onboardingVoiceover from '../assets/onboarding vo.mp3';
 
 interface WelcomeScreenProps {
   onContinue: () => void;
@@ -9,6 +10,7 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const checkServer = async () => {
@@ -40,8 +42,32 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
     checkServer();
   }, []);
 
+  useEffect(() => {
+    const audioEl = audioRef.current;
+    if (!audioEl) return;
+
+    audioEl.volume = 1;
+    audioEl.playbackRate = 1;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        audioEl.currentTime = 0;
+        await audioEl.play();
+      } catch (err) {
+        console.warn('Onboarding voiceover autoplay blocked', err);
+      }
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+      audioEl.pause();
+      audioEl.currentTime = 0;
+    };
+  }, []);
+
   return (
     <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-y-auto">
+      <audio ref={audioRef} src={onboardingVoiceover} preload="auto" />
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
