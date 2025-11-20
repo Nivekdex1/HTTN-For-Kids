@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import imgLogo from 'figma:asset/2f881615ac1cd9aa71d59f5da7d7ee06972ab3f1.png';
@@ -9,7 +9,6 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
-  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -28,14 +27,11 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
         if (response.ok) {
           const data = await response.json();
           console.log('Server health check response:', data);
-          setServerStatus('online');
         } else {
           console.error('Server health check failed with status:', response.status);
-          setServerStatus('offline');
         }
       } catch (error) {
         console.error('Server health check error:', error);
-        setServerStatus('offline');
       }
     };
 
@@ -46,22 +42,46 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
     const audioEl = audioRef.current;
     if (!audioEl) return;
 
-    audioEl.volume = 1;
+    audioEl.volume = 0;
+    audioEl.muted = true;
     audioEl.playbackRate = 1;
+
+    let fadeInterval: number | null = null;
 
     const timer = window.setTimeout(async () => {
       try {
         audioEl.currentTime = 0;
         await audioEl.play();
+        audioEl.muted = false;
+
+        // Smoothly fade the volume back up now that playback has started
+        fadeInterval = window.setInterval(() => {
+          if (!audioEl) return;
+          const nextVolume = Math.min(audioEl.volume + 0.1, 1);
+          audioEl.volume = nextVolume;
+          if (nextVolume >= 1 && fadeInterval) {
+            window.clearInterval(fadeInterval);
+            fadeInterval = null;
+          }
+        }, 150);
       } catch (err) {
         console.warn('Onboarding voiceover autoplay blocked', err);
+        if (fadeInterval) {
+          window.clearInterval(fadeInterval);
+          fadeInterval = null;
+        }
       }
     }, 500);
 
     return () => {
       window.clearTimeout(timer);
+      if (fadeInterval) {
+        window.clearInterval(fadeInterval);
+      }
       audioEl.pause();
       audioEl.currentTime = 0;
+      audioEl.muted = false;
+      audioEl.volume = 1;
     };
   }, []);
 
@@ -98,30 +118,11 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
           </p>
         </div>
 
-        {serverStatus === 'offline' && (
-          <div className="bg-red-100 border-2 sm:border-4 border-red-400 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
-            <p className="text-red-700 text-sm sm:text-base md:text-lg">
-              ⚠️ Server connection issue. The app may not work properly. Please refresh the page.
-            </p>
-          </div>
-        )}
-
-        {serverStatus === 'checking' && (
-          <div className="bg-blue-100 border-2 sm:border-4 border-blue-400 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
-            <p className="text-blue-700 text-sm sm:text-base md:text-lg">
-              🔄 Checking server connection...
-            </p>
-          </div>
-        )}
-
-
-
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onContinue}
-          disabled={serverStatus !== 'online'}
-          className="bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white px-6 sm:px-10 md:px-16 py-4 sm:py-6 md:py-8 rounded-full text-base sm:text-lg md:text-xl lg:text-2xl font-bold hover:from-red-600 hover:via-pink-600 hover:to-purple-600 transition-all shadow-2xl disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed border-2 sm:border-4 border-white transform hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] w-full sm:w-auto"
+          className="bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white px-6 sm:px-10 md:px-16 py-4 sm:py-6 md:py-8 rounded-full text-base sm:text-lg md:text-xl lg:text-2xl font-bold hover:from-red-600 hover:via-pink-600 hover:to-purple-600 transition-all shadow-2xl border-2 sm:border-4 border-white transform hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] w-full sm:w-auto"
           transition={{ type: "spring", stiffness: 300 }}
         >
           <span className="flex items-center justify-center gap-2 sm:gap-3 font-[Rounded_Mplus_1c] font-bold font-normal font-[Varela_Round] text-center">
