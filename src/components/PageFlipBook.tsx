@@ -141,6 +141,27 @@ export function PageFlipBook({ pages, onPageChange }: PageFlipBookProps) {
     }),
   };
 
+  const pagePeelVariants = {
+    idle: {
+      opacity: 0,
+      clipPath: 'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)',
+      scale: 0.8,
+      x: 0,
+    },
+    forward: {
+      opacity: 0.35,
+      clipPath: 'polygon(55% 0, 100% 0, 100% 100%, 30% 100%)',
+      scale: 1,
+      x: 0,
+    },
+    backward: {
+      opacity: 0.35,
+      clipPath: 'polygon(0 0, 45% 0, 20% 100%, 0% 100%)',
+      scale: 1,
+      x: 0,
+    },
+  } as const;
+
   return (
     <div
       className="absolute inset-0 overflow-hidden"
@@ -199,6 +220,26 @@ export function PageFlipBook({ pages, onPageChange }: PageFlipBookProps) {
           {pages[currentPage]?.component}
         </motion.div>
       </AnimatePresence>
+
+      {/* Enhanced page peel overlay for desktop */}
+      {!isMobile && (
+        <motion.div
+          className="pointer-events-none absolute inset-0"
+          variants={pagePeelVariants}
+          animate={isFlipping ? (direction > 0 ? 'forward' : 'backward') : 'idle'}
+          transition={{
+            duration: isFlipping ? 0.45 : 0.25,
+            ease: 'easeInOut',
+          }}
+          style={{
+            background: direction > 0
+              ? 'linear-gradient(135deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 70%)'
+              : 'linear-gradient(225deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 70%)',
+            mixBlendMode: 'screen',
+            filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.25))',
+          }}
+        />
+      )}
 
       {/* Page curl shadow effect */}
       {isFlipping && (

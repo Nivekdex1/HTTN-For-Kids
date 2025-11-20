@@ -23,6 +23,7 @@ import Page14 from './components/pages/Page14';
 import Page15 from './components/pages/Page15';
 import Page16 from './components/pages/Page16';
 import { projectId, publicAnonKey } from './utils/supabase/info';
+import { useBackgroundAssetPreloader } from './utils/useBackgroundAssetPreloader';
 
 type AppState = 'welcome' | 'signup' | 'login' | 'signup-success' | 'magazine' | 'admin';
 
@@ -42,6 +43,8 @@ export default function App() {
   const [accessToken, setAccessToken] = useState<string>('');
   const [signupUsername, setSignupUsername] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useBackgroundAssetPreloader();
 
 
 
