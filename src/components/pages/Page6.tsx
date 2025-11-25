@@ -245,7 +245,10 @@ export default function Page6() {
   };
 
   const playVideo = async () => {
-    if (!videoPanelRef.current) return;
+    if (!videoPanelRef.current) {
+      console.log("Page 6: Video ref not available");
+      return;
+    }
     stopMemoryVerseAudio();
     try {
       await videoPanelRef.current.play();
@@ -291,9 +294,11 @@ export default function Page6() {
 
   // Auto-play effect
   useEffect(() => {
+    console.log("Page 6: Auto-play effect triggered", { isAutoPlaying, isStoryPlaying });
     if (isAutoPlaying && !isStoryPlaying) {
       const timer = setTimeout(() => {
         if (isMountedRef.current) {
+          console.log("Page 6: Starting auto-play");
           handleStoryToggle();
         }
       }, 800);

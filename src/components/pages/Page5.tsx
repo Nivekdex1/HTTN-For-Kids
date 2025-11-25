@@ -261,11 +261,15 @@ export default function Page5() {
       }
 
       if (isStoryPlaying) {
+        console.log("Page 5: Story playing finished");
         setIsStoryPlaying(false);
         setStoryStage("finished");
 
         if (isAutoPlaying) {
+          console.log("Page 5: Auto-play enabled, going to next page");
           goToNextPage();
+        } else {
+          console.log("Page 5: Auto-play disabled, stopping");
         }
       }
     };
