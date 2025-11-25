@@ -5,6 +5,7 @@ import svgPaths from "../../imports/svg-0eozkmxqgd";
 import imgImage21 from "figma:asset/625faa7bdb865743835f93d71f6553bdec3184d0.png";
 import comicVideoThree from "../../assets/comic 3.mp4";
 import comicVideoFour from "../../assets/comic 4.mp4";
+import { useStory } from "../../contexts/StoryContext";
 
 const BUTTON_BASE = "rounded-2xl px-8 py-4 shadow-2xl transition-all flex items-center gap-3 text-white font-bold";
 
@@ -71,7 +72,7 @@ function VideoPanel({
           onClick={() => onTogglePlayback(panelId)}
           label="Play"
         />
-          </div>
+      </div>
       <div className={`relative w-full ${videoWrapperClass ?? ""}`}>
         <div className="relative w-full border-[12px] border-white rounded-[48px] overflow-hidden shadow-[0_40px_120px_rgba(38,16,74,0.35)] bg-black/90">
           <video
@@ -114,6 +115,7 @@ export default function Page5() {
   const [panelPlaying, setPanelPlaying] = useState<number | null>(null);
   const isMountedRef = useRef(true);
   const timersRef = useRef<number[]>([]);
+  const { isAutoPlaying, setIsAutoPlaying, goToNextPage } = useStory();
 
   const pauseAllVideos = () => {
     videoThreeRef.current?.pause();
@@ -133,6 +135,7 @@ export default function Page5() {
     if (isStoryPlaying) {
       pauseAllVideos();
       setIsStoryPlaying(false);
+      setIsAutoPlaying(false);
       setPanelPlaying(null);
       return;
     }
@@ -141,6 +144,7 @@ export default function Page5() {
     resetVideos();
     setStoryStage("video1");
     setIsStoryPlaying(true);
+    setIsAutoPlaying(true);
 
     if (videoThreeRef.current) {
       try {
@@ -156,6 +160,7 @@ export default function Page5() {
 
   const handlePanelToggle = async (panelId: number) => {
     setIsStoryPlaying(false);
+    setIsAutoPlaying(false);
     setStoryStage("idle");
 
     if (panelPlaying === panelId) {
@@ -178,6 +183,19 @@ export default function Page5() {
       }
     }
   };
+
+  // Auto-play effect
+  useEffect(() => {
+    if (isAutoPlaying && !isStoryPlaying && storyStage === "idle") {
+      // Small delay to ensure page transition is done
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          handleStoryToggle();
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isAutoPlaying]); // Only run when isAutoPlaying changes or on mount
 
   useEffect(() => {
     const timer1 = window.setTimeout(() => {
@@ -245,6 +263,10 @@ export default function Page5() {
       if (isStoryPlaying) {
         setIsStoryPlaying(false);
         setStoryStage("finished");
+
+        if (isAutoPlaying) {
+          goToNextPage();
+        }
       }
     };
 
@@ -252,7 +274,7 @@ export default function Page5() {
     return () => {
       videoTwo.removeEventListener("ended", handleEnded);
     };
-  }, [isStoryPlaying, panelPlaying]);
+  }, [isStoryPlaying, panelPlaying, isAutoPlaying, goToNextPage]);
 
   useEffect(() => {
     return () => {

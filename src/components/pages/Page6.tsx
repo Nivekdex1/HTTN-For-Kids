@@ -8,6 +8,7 @@ import imgJesusHealsTheCrippledWoman1 from "figma:asset/58fd468a5dcfe4e0a04933d7
 import imgMemoryVerse from "figma:asset/57a728b73006b2bec9bc05441c69d4807301de4b.png";
 import comicVideoFive from "../../assets/comic 5.mp4";
 import memoryVerseAudio from "../../assets/P6.mp3";
+import { useStory } from "../../contexts/StoryContext";
 
 const BUTTON_BASE = "rounded-2xl px-8 py-4 shadow-2xl transition-all flex items-center gap-3 text-white font-bold";
 const DEFAULT_PANEL_OFFSET = 820;
@@ -194,6 +195,7 @@ export default function Page6() {
   const [panelOffset, setPanelOffset] = useState(DEFAULT_PANEL_OFFSET);
   const isMountedRef = useRef(true);
   const memoryVerseAudioRef = useRef<HTMLAudioElement | null>(null);
+  const { isAutoPlaying, setIsAutoPlaying } = useStory();
 
   const pauseVideo = () => {
     videoPanelRef.current?.pause();
@@ -237,6 +239,7 @@ export default function Page6() {
 
     pauseVideo();
     setIsStoryPlaying(false);
+    setIsAutoPlaying(false);
     stopMemoryVerseAudio();
     await playMemoryVerseAudio();
   };
@@ -264,10 +267,12 @@ export default function Page6() {
       pauseVideo();
       stopMemoryVerseAudio();
       setIsStoryPlaying(false);
+      setIsAutoPlaying(false);
       return;
     }
 
     resetVideo();
+    setIsAutoPlaying(true);
     await playVideo();
   };
 
@@ -276,12 +281,25 @@ export default function Page6() {
       pauseVideo();
       stopMemoryVerseAudio();
       setIsStoryPlaying(false);
+      setIsAutoPlaying(false);
       return;
     }
 
     resetVideo();
     await playVideo();
   };
+
+  // Auto-play effect
+  useEffect(() => {
+    if (isAutoPlaying && !isStoryPlaying) {
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          handleStoryToggle();
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isAutoPlaying]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -343,6 +361,10 @@ export default function Page6() {
     const handleEnded = () => {
       if (isMountedRef.current) {
         setIsStoryPlaying(false);
+        // End of story sequence
+        if (isAutoPlaying) {
+          setIsAutoPlaying(false);
+        }
       }
       void playMemoryVerseAudio();
     };
@@ -351,7 +373,7 @@ export default function Page6() {
     return () => {
       video.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [isAutoPlaying]); // Added isAutoPlaying dependency
 
   useEffect(() => {
     if (typeof window === "undefined") {

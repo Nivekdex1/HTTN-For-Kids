@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MagazineContainer } from './components/MagazineContainer';
-import { PageFlipBook } from './components/PageFlipBook';
+import { PageFlipBook, PageFlipBookHandle } from './components/PageFlipBook';
+import { StoryProvider } from './contexts/StoryContext';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SignupForm } from './components/SignupForm';
 import { LoginForm } from './components/LoginForm';
@@ -47,6 +48,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const hasRestoredSessionRef = useRef(false);
+  const bookRef = useRef<PageFlipBookHandle>(null);
 
   useBackgroundAssetPreloader();
 
@@ -57,7 +59,7 @@ export default function App() {
       console.log('Attempting signup with data:', data);
       console.log('Project ID:', projectId);
       console.log('Public Anon Key:', publicAnonKey ? 'Present' : 'Missing');
-      
+
       const url = `https://${projectId}.supabase.co/functions/v1/make-server-3669e37f/signup`;
       console.log('Signup URL:', url);
 
@@ -93,7 +95,7 @@ export default function App() {
   const handleLogin = async (username: string) => {
     try {
       console.log('Attempting login for username:', username);
-      
+
       // Check if admin login
       if (username === ADMIN_USERNAME) {
         console.log('Admin login detected');
@@ -103,7 +105,7 @@ export default function App() {
         setCurrentPage(0);
         return;
       }
-      
+
       const url = `https://${projectId}.supabase.co/functions/v1/make-server-3669e37f/login`;
       console.log('Login URL:', url);
 
@@ -130,6 +132,7 @@ export default function App() {
       setIsAdmin(false);
       setAppState('magazine');
       setCurrentPage(result.lastPage ?? 0);
+      localStorage.setItem('last_login_timestamp', Date.now().toString());
     } catch (error: any) {
       console.error('Login error details:', error);
       console.error('Error message:', error.message);
@@ -137,28 +140,96 @@ export default function App() {
     }
   };
 
+  // Persist session whenever auth/app state changes
+  useEffect(() => {
+    if (!sessionLoaded) return;
+    if (typeof window === 'undefined') return;
+
+    try {
+      const sessionPayload = {
+        appState,
+        userData,
+        accessToken,
+        signupUsername,
+        isAdmin,
+        currentPage,
+      };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+    } catch (error) {
+      console.warn('Failed to persist session state', error);
+    }
+  }, [appState, userData, accessToken, signupUsername, isAdmin, currentPage, sessionLoaded]);
+
+  // Verify session on load
+  useEffect(() => {
+    if (!sessionLoaded || !accessToken || isAdmin) return;
+
+    // Avoid verifying if we just logged in (within last 5 seconds)
+    // This helps prevent race conditions where the token might be fresh but the server check fails for some reason
+    const lastLoginTime = localStorage.getItem('last_login_timestamp');
+    if (lastLoginTime && Date.now() - parseInt(lastLoginTime) < 5000) {
+      return;
+    }
+
+    const verifySession = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-3669e37f/profile`,
+          {
+            headers: {
+              'Authorization': `Bearer ${publicAnonKey}`,
+              'X-Session-Token': accessToken,
+            },
+          }
+        );
+
+        if (response.status === 401) {
+          console.log('Session expired, redirecting to welcome screen');
+          // Only redirect if we are sure it's an expiration
+          // Maybe add a small delay or retry? For now, let's just clear.
+          setAccessToken('');
+          setUserData(null);
+          setAppState('welcome');
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.error('Error verifying session:', error);
+      }
+    };
+
+    verifySession();
+  }, [sessionLoaded, accessToken, isAdmin]);
+
   const handlePageChange = async (pageNumber: number) => {
     setCurrentPage(pageNumber);
     if (accessToken) {
       try {
-        await fetch(
+        const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-3669e37f/track-page`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
+              'Authorization': `Bearer ${publicAnonKey}`,
+              'X-Session-Token': accessToken,
             },
             body: JSON.stringify({ pageNumber }),
           }
         );
+
+        if (response.status === 401) {
+          const data = await response.json();
+          console.log('Session expired during page track, redirecting to welcome screen. Full response:', data);
+          setAccessToken('');
+          setUserData(null);
+          setAppState('welcome');
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
       } catch (error) {
         console.error('Error tracking page:', error);
       }
     }
   };
-
-
 
   // Magazine pages
   const magazinePages = [
@@ -260,26 +331,6 @@ export default function App() {
     }
   }, [magazinePages.length]);
 
-  // Persist session whenever auth/app state changes
-  useEffect(() => {
-    if (!sessionLoaded) return;
-    if (typeof window === 'undefined') return;
-
-    try {
-      const sessionPayload = {
-        appState,
-        userData,
-        accessToken,
-        signupUsername,
-        isAdmin,
-        currentPage,
-      };
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
-    } catch (error) {
-      console.warn('Failed to persist session state', error);
-    }
-  }, [appState, userData, accessToken, signupUsername, isAdmin, currentPage, sessionLoaded]);
-
   return (
     <>
       {appState === 'welcome' && (
@@ -309,11 +360,14 @@ export default function App() {
 
       {appState === 'magazine' && !isAdmin && (
         <MagazineContainer>
-          <PageFlipBook
-            pages={magazinePages}
-            onPageChange={handlePageChange}
-            initialPage={currentPage}
-          />
+          <StoryProvider goToNextPage={() => bookRef.current?.nextPage()}>
+            <PageFlipBook
+              ref={bookRef}
+              pages={magazinePages}
+              onPageChange={handlePageChange}
+              initialPage={currentPage}
+            />
+          </StoryProvider>
         </MagazineContainer>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileNav } from './MobileNav';
 
@@ -13,7 +13,12 @@ interface PageFlipBookProps {
   initialPage?: number;
 }
 
-export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipBookProps) {
+export interface PageFlipBookHandle {
+  nextPage: () => void;
+  prevPage: () => void;
+}
+
+export const PageFlipBook = forwardRef<PageFlipBookHandle, PageFlipBookProps>(({ pages, onPageChange, initialPage = 0 }, ref) => {
   const [currentPage, setCurrentPage] = useState(() => {
     if (Number.isInteger(initialPage)) {
       return Math.min(Math.max(initialPage, 0), pages.length - 1);
@@ -38,14 +43,14 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    
+
     // Stop all HTML5 audio elements
     const audioElements = document.querySelectorAll('audio');
     audioElements.forEach(audio => {
       audio.pause();
       audio.currentTime = 0;
     });
-    
+
     // Stop all HTML5 video elements
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach(video => {
@@ -58,12 +63,12 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
     if (currentPage < pages.length - 1 && !isFlipping) {
       // Stop all audio BEFORE flipping
       stopAllAudio();
-      
+
       setIsFlipping(true);
       setDirection(1);
       setCurrentPage(currentPage + 1);
       onPageChange?.(currentPage + 1);
-      
+
       if (flippingTimerRef.current) {
         clearTimeout(flippingTimerRef.current);
       }
@@ -78,21 +83,26 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
     if (currentPage > 0 && !isFlipping) {
       // Stop all audio BEFORE flipping
       stopAllAudio();
-      
+
       setIsFlipping(true);
       setDirection(-1);
       setCurrentPage(currentPage - 1);
       onPageChange?.(currentPage - 1);
-      
+
       if (flippingTimerRef.current) {
         clearTimeout(flippingTimerRef.current);
       }
-                  flippingTimerRef.current = window.setTimeout(() => {
-                    setIsFlipping(false);
-                    flippingTimerRef.current = null;
-                  }, 150);
+      flippingTimerRef.current = window.setTimeout(() => {
+        setIsFlipping(false);
+        flippingTimerRef.current = null;
+      }, 150);
     }
   }, [currentPage, onPageChange, isFlipping, stopAllAudio]);
+
+  useImperativeHandle(ref, () => ({
+    nextPage,
+    prevPage
+  }));
 
   // Keyboard navigation
   useEffect(() => {
@@ -179,7 +189,7 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
   return (
     <div
       className="absolute inset-0 overflow-hidden"
-      style={{ 
+      style={{
         perspective: isMobile ? 'none' : '3000px',
         perspectiveOrigin: '50% 50%'
       }}
@@ -196,14 +206,14 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
             opacity: { duration: 0.12 },
             x: { duration: 0.18, ease: 'easeInOut' }
           } : {
-            rotateY: { 
-              type: 'spring', 
-              stiffness: 220, 
+            rotateY: {
+              type: 'spring',
+              stiffness: 220,
               damping: 18,
-              mass: 0.6 
+              mass: 0.6
             },
             opacity: { duration: 0.12 },
-            scale: { 
+            scale: {
               type: 'spring',
               stiffness: 200,
               damping: 18
@@ -218,7 +228,7 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
           style={{
             transformStyle: isMobile ? 'flat' : 'preserve-3d',
             backfaceVisibility: isMobile ? 'visible' : 'hidden',
-            boxShadow: isMobile ? 'none' : (isFlipping 
+            boxShadow: isMobile ? 'none' : (isFlipping
               ? '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 0, 0, 0.1)'
               : '0 10px 30px rgba(0, 0, 0, 0.1)'),
           }}
@@ -230,7 +240,7 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
             animate={{ opacity: isFlipping ? 0.3 : 0 }}
             transition={{ duration: 0.12 }}
           />
-          
+
           {pages[currentPage]?.component}
         </motion.div>
       </AnimatePresence>
@@ -280,12 +290,12 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
                 if (!isFlipping && index !== currentPage) {
                   // Stop all audio BEFORE flipping
                   stopAllAudio();
-                  
+
                   setIsFlipping(true);
                   setDirection(index > currentPage ? 1 : -1);
                   setCurrentPage(index);
                   onPageChange?.(index);
-                  
+
                   if (flippingTimerRef.current) {
                     clearTimeout(flippingTimerRef.current);
                   }
@@ -295,11 +305,10 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
                   }, 500);
                 }
               }}
-              className={`rounded-full transition-all ${
-                index === currentPage
+              className={`rounded-full transition-all ${index === currentPage
                   ? 'bg-red-600 w-8 h-3'
                   : 'bg-white/50 hover:bg-white/80 w-3 h-3'
-              }`}
+                }`}
               whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
               aria-label={`Go to page ${index + 1}`}
@@ -349,4 +358,4 @@ export function PageFlipBook({ pages, onPageChange, initialPage = 0 }: PageFlipB
       />
     </div>
   );
-}
+});

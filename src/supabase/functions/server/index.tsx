@@ -17,8 +17,8 @@ const supabase = createClient(
 // Health check endpoint
 app.get('/make-server-3669e37f/health', (c) => {
   console.log('Health check requested');
-  return c.json({ 
-    status: 'ok', 
+  return c.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     message: 'Healing to the Nations Magazine Server is running',
   });
@@ -26,11 +26,56 @@ app.get('/make-server-3669e37f/health', (c) => {
 
 // Helper function to get user from access token
 async function getUserFromToken(accessToken: string | null) {
-  if (!accessToken) return null;
-  const userId = await kv.get(`session:${accessToken}`);
-  if (!userId) return null;
+  if (!accessToken) return { error: 'No access token provided' };
+
+  // Check for session expiration (6 hours)
+  try {
+    const parts = accessToken.split('_');
+    const timestamp = parseInt(parts[parts.length - 1]);
+    const sixHoursInMs = 6 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    console.log(`Checking token: ${accessToken}`);
+    console.log(`Timestamp: ${timestamp}, Now: ${now}, Diff: ${diff}, Limit: ${sixHoursInMs}`);
+
+    if (now - timestamp > sixHoursInMs) { // Fixed ReferenceError: diff is not defined
+      console.log('Session expired for token:', accessToken);
+      // Optional: Clean up expired session
+      await kv.del(`session:${accessToken}`);
+      return { error: 'Session expired' };
+    }
+  } catch (e) {
+    console.log('Error checking session expiration:', e);
+    // If token format is invalid, we might still want to check if it exists in KV,
+    // but for now let's proceed to check KV validity.
+  }
+
+  const sessionKey = `session:${accessToken}`;
+  console.log(`Attempting to retrieve session from KV with key: ${sessionKey}`);
+  const userId = await kv.get(sessionKey);
+
+  if (!userId) {
+    console.log(`Session NOT found in KV for key: ${sessionKey}`);
+    // Debug: list some sessions to see if we are close
+    try {
+      const prefix = `session:session_user_`;
+      const someSessions = await kv.getByPrefix(prefix);
+      console.log(`Debug: Found ${someSessions.length} sessions starting with ${prefix}`);
+    } catch (debugErr) {
+      console.log('Debug list failed', debugErr);
+    }
+    return { error: 'Session not found in KV' };
+  }
+
+  console.log(`Session found. UserId: ${userId}`);
+
   const userData = await kv.get(`userId:${userId}`);
-  return userData;
+  if (!userData) {
+    console.log(`User data not found for userId: ${userId}`);
+    return { error: 'User data not found' };
+  }
+
+  return { user: userData };
 }
 
 // User signup (simplified - no Supabase Auth)
@@ -77,8 +122,8 @@ app.post('/make-server-3669e37f/signup', async (c) => {
 
     console.log('User created successfully:', username);
 
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       username,
       userId,
       message: 'Account created successfully! Remember your username for logging in next time.',
@@ -128,11 +173,18 @@ app.post('/make-server-3669e37f/login', async (c) => {
 
     // Generate a simple session token
     const accessToken = `session_${userData.id}_${Date.now()}`;
-    await kv.set(`session:${accessToken}`, userData.id);
+    const sessionKey = `session:${accessToken}`;
+    console.log(`Creating session. Key: ${sessionKey}, Value: ${userData.id}`);
+
+    await kv.set(sessionKey, userData.id);
+
+    // Verify immediate write
+    const verifyWrite = await kv.get(sessionKey);
+    console.log(`Immediate readback of session: ${verifyWrite ? 'Success' : 'FAILED'}`);
 
     console.log('User logged in successfully:', username);
 
-    return c.json({ 
+    return c.json({
       success: true,
       accessToken,
       user: {
@@ -152,12 +204,13 @@ app.post('/make-server-3669e37f/login', async (c) => {
 // Get user profile (requires auth)
 app.get('/make-server-3669e37f/profile', async (c) => {
   try {
-    const accessToken = c.req.header('Authorization')?.split(' ')[1];
-    const userData = await getUserFromToken(accessToken || null);
-    
-    if (!userData) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    const accessToken = c.req.header('X-Session-Token');
+    const result = await getUserFromToken(accessToken || null);
+
+    if (result.error || !result.user) {
+      return c.json({ error: result.error || 'Unauthorized' }, 401);
     }
+    const userData = result.user;
 
     return c.json({
       username: userData.username,
@@ -176,14 +229,14 @@ app.get('/make-server-3669e37f/profile', async (c) => {
 app.get('/make-server-3669e37f/admin/analytics', async (c) => {
   try {
     console.log('Analytics endpoint called');
-    
+
     // Check for admin access using custom header
     const adminKey = c.req.header('X-Admin-Key');
     console.log('Admin key received:', adminKey);
-    
+
     // Check if it's the special admin key
     const isAdmin = adminKey === 'HTTNADMIN_ACCESS_KEY';
-    
+
     if (!isAdmin) {
       console.log('Unauthorized analytics access attempt - invalid admin key');
       return c.json({ error: 'Unauthorized - Admin access required' }, 401);
@@ -194,7 +247,7 @@ app.get('/make-server-3669e37f/admin/analytics', async (c) => {
     // Get all users
     const allUsers = await kv.getByPrefix('user:');
     console.log('Found users:', allUsers.length);
-    
+
     const users = allUsers.map((u: any) => ({
       username: u.username,
       fullname: u.fullname,
@@ -244,12 +297,14 @@ app.get('/make-server-3669e37f/admin/analytics', async (c) => {
 // Track page visit (requires auth)
 app.post('/make-server-3669e37f/track-page', async (c) => {
   try {
-    const accessToken = c.req.header('Authorization')?.split(' ')[1];
-    const userData = await getUserFromToken(accessToken || null);
-    
-    if (!userData) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    const accessToken = c.req.header('X-Session-Token');
+    const result = await getUserFromToken(accessToken || null);
+
+    if (result.error || !result.user) {
+      console.log('Track page unauthorized:', result.error);
+      return c.json({ error: result.error || 'Unauthorized' }, 401);
     }
+    const userData = result.user;
 
     const body = await c.req.json();
     const { pageNumber } = body;

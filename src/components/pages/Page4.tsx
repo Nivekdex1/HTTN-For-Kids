@@ -7,6 +7,7 @@ import imgTitle1 from "figma:asset/aa97184b78cc19a8201b076de18714abb5e92a4a.png"
 import imgJesusHealsTheCrippledWoman1 from "figma:asset/58fd468a5dcfe4e0a04933d719da8770b8f5fa9f.png";
 import comicVideoOne from "../../assets/comic 1.mp4";
 import comicVideoTwo from "../../assets/comic 2.mp4";
+import { useStory } from "../../contexts/StoryContext";
 
 function TitleHeader() {
   return (
@@ -88,6 +89,7 @@ export default function Page4() {
   const [stage, setStage] = useState<StoryStage>("idle");
   const [panelPlaying, setPanelPlaying] = useState<number | null>(null);
   const isMountedRef = useRef(true);
+  const { isAutoPlaying, setIsAutoPlaying, goToNextPage } = useStory();
 
   useEffect(() => {
     return () => {
@@ -115,6 +117,7 @@ export default function Page4() {
 
   const handlePanelToggle = async (panelId: number) => {
     setIsStoryPlaying(false);
+    setIsAutoPlaying(false); // Stop auto-play if user manually toggles a panel
     setStage("idle");
 
     if (panelPlaying === panelId) {
@@ -150,11 +153,13 @@ export default function Page4() {
     if (isStoryPlaying) {
       pauseAllVideos();
       setIsStoryPlaying(false);
+      setIsAutoPlaying(false);
       setPanelPlaying(null);
       return;
     }
 
     resetVideos();
+    setIsAutoPlaying(true); // Enable auto-play sequence
 
     switch (stage) {
       case "idle":
@@ -223,6 +228,11 @@ export default function Page4() {
       if (isStoryPlaying) {
         setIsStoryPlaying(false);
         setStage("finished");
+
+        // If auto-playing, go to next page
+        if (isAutoPlaying) {
+          goToNextPage();
+        }
       }
     };
 
@@ -230,7 +240,7 @@ export default function Page4() {
     return () => {
       videoTwo.removeEventListener("ended", handleEnded);
     };
-  }, [isStoryPlaying, panelPlaying]);
+  }, [isStoryPlaying, panelPlaying, isAutoPlaying, goToNextPage]);
 
   const buttonLabel = isStoryPlaying ? "PAUSE STORY" : stage === "finished" ? "PLAY AGAIN" : "PLAY FULL STORY";
   const buttonIcon = isStoryPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />;
@@ -243,7 +253,7 @@ export default function Page4() {
           <img alt="Background" className="absolute h-[128.91%] left-[-36.66%] max-w-none top-[-16.21%] w-[273.37%]" src={imgBg} />
         </div>
       </div>
-      
+
       <TitleHeader />
 
       {/* Comic videos stack */}
