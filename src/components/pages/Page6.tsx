@@ -296,12 +296,21 @@ export default function Page6() {
   useEffect(() => {
     console.log("Page 6: Auto-play effect triggered", { isAutoPlaying, isStoryPlaying });
     if (isAutoPlaying && !isStoryPlaying) {
-      const timer = setTimeout(() => {
-        if (isMountedRef.current) {
+      const attemptPlay = (attempts = 0) => {
+        if (!isMountedRef.current) return;
+
+        if (videoPanelRef.current) {
           console.log("Page 6: Starting auto-play");
           handleStoryToggle();
+        } else if (attempts < 5) {
+          console.log(`Page 6: Video ref not ready, retrying (attempt ${attempts + 1})...`);
+          setTimeout(() => attemptPlay(attempts + 1), 500);
+        } else {
+          console.error("Page 6: Failed to auto-play, video ref never became ready");
         }
-      }, 800);
+      };
+
+      const timer = setTimeout(() => attemptPlay(), 800);
       return () => clearTimeout(timer);
     }
   }, [isAutoPlaying]);

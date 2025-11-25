@@ -185,7 +185,9 @@ export default function App() {
         );
 
         if (response.status === 401) {
-          console.log('Session expired, redirecting to welcome screen');
+          const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.log('Session verification failed (401). Server response:', data);
+
           // Only redirect if we are sure it's an expiration
           // Maybe add a small delay or retry? For now, let's just clear.
           setAccessToken('');
