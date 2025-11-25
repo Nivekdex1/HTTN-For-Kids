@@ -25,8 +25,8 @@ import confAudio8 from "../../assets/conf-8.mp3";
 function HeaderText() {
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-center relative shrink-0 w-[1095px]" data-name="Header Text">
-      <motion.div 
-        className="h-[227px] relative shrink-0 w-[933px]" 
+      <motion.div
+        className="h-[227px] relative shrink-0 w-[933px]"
         data-name="image 87"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -34,8 +34,8 @@ function HeaderText() {
       >
         <img alt="My Divine Health" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage87} />
       </motion.div>
-      <motion.div 
-        className="aspect-[1111/195] relative shrink-0 w-full" 
+      <motion.div
+        className="aspect-[1111/195] relative shrink-0 w-full"
         data-name="Confessions 1"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -50,17 +50,17 @@ function HeaderText() {
 function Header() {
   return (
     <div className="absolute content-stretch flex gap-[35px] items-center left-[calc(50%+0.5px)] top-[116px] translate-x-[-50%] z-10" data-name="Header">
-      <motion.div 
-        className="h-[483px] relative shrink-0 w-[303px]" 
+      <motion.div
+        className="h-[483px] relative shrink-0 w-[303px]"
         data-name="image 86"
         initial={{ opacity: 0, x: -50, rotate: -5 }}
-        animate={{ 
-          opacity: 1, 
+        animate={{
+          opacity: 1,
           x: 0,
           rotate: 0,
           y: [-8, 8, -8]
         }}
-        transition={{ 
+        transition={{
           opacity: { duration: 1, delay: 0.2 },
           x: { duration: 1, delay: 0.2 },
           rotate: { duration: 1, delay: 0.2 },
@@ -85,43 +85,43 @@ function Pagination() {
 // TODO: Replace these with the EXACT text from Page 14 Divine Health Confessions as they appear on the page
 // These are placeholders - you need to provide the exact textual content for each confession
 const confessions = [
-  { 
-    img: imgImage95, 
+  {
+    img: imgImage95,
     delay: 0.7,
     text: "I am constantly mindful of God's indwelling and abiding presence, which has made me a victor and a master over sickness and circumstances."
   },
-  { 
-    img: imgImage94, 
+  {
+    img: imgImage94,
     delay: 0.8,
     text: "Fears, worries, darkness, confusion, and uncertainty have no place in me, for the true light shines in my heart."
   },
-  { 
-    img: imgImage93, 
+  {
+    img: imgImage93,
     delay: 0.9,
     text: "I'm born of God; greater is He that is in me than he that is in the world! Divinity is at work in me; as Jesus is, so am I in this world."
   },
-  { 
-    img: imgImage92, 
+  {
+    img: imgImage92,
     delay: 1.0,
     text: "I reign in every aspect of life. I disallow sickness, poverty, and defeat in my life and in the lives of my loved ones, and I unleash the forces of health, prosperity, and victory in my world."
   },
-  { 
-    img: imgImage91, 
+  {
+    img: imgImage91,
     delay: 1.1,
     text: "I am divinely connected to the One who is the way, the truth, and the life. In my path is light that manifests supernatural strength and vitality."
   },
-  { 
-    img: imgImage90, 
+  {
+    img: imgImage90,
     delay: 1.2,
     text: "I take advantage of God's presence and bask in the glory and transformation that it brings. I grow stronger by the day, like a cedar in Lebanon, and flourish like a palm tree!"
   },
-  { 
-    img: imgImage89, 
+  {
+    img: imgImage89,
     delay: 1.3,
     text: "I am in control and in charge of what happens to my body; thus, I only give expression to the workings of the Holy Spirit in my life and in my body."
   },
-  { 
-    img: imgImage88, 
+  {
+    img: imgImage88,
     delay: 1.4,
     text: "I live in the victories that the death, burial, and resurrection of Christ wrought for me; the glorious life of success, prosperity, divine health, and unending grace."
   },
@@ -175,6 +175,7 @@ export default function Page14() {
       audio.pause();
       audio.currentTime = 0;
       audio.src = confessionAudioSources[index];
+      audio.playbackRate = 0.9; // Reduce speed by 10%
 
       try {
         await audio.play();
@@ -191,6 +192,7 @@ export default function Page14() {
     if (!audio) return;
 
     try {
+      audio.playbackRate = 0.9; // Ensure speed is maintained
       await audio.play();
       setIsPlaying(true);
     } catch (err) {
@@ -201,6 +203,7 @@ export default function Page14() {
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'auto';
+    audio.playbackRate = 0.9; // Set default playback rate
 
     const handleEnded = () => {
       const nextIndex = currentIndexRef.current + 1;
@@ -233,7 +236,7 @@ export default function Page14() {
         console.warn('Autoplay blocked for confession audio', err);
         setAutoplayAttempted(true);
       }
-    }, 1200);
+    }, 1333); // Adjusted delay (1200 * 1.11)
 
     return () => clearTimeout(timer);
   }, [autoplayAttempted, playConfession]);
@@ -261,7 +264,7 @@ export default function Page14() {
         <div className="absolute h-[2480px] left-0 top-0 w-[1754px]" data-name="image 96">
           <img alt="Background" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage96} />
         </div>
-        
+
         {/* Confession statements with staggered animations */}
         {confessions.map((confession, index) => (
           <motion.div
@@ -274,22 +277,22 @@ export default function Page14() {
               width: `${confessionPositions[index].width}px`,
             }}
             initial={{ opacity: 0, x: -30 }}
-            animate={{ 
+            animate={{
               opacity: currentConfessionIndex === -1 ? 1 : (currentConfessionIndex === index ? 1 : 0.45),
               x: 0,
               scale: currentConfessionIndex === index ? 1.08 : 1,
             }}
-            transition={{ 
-              opacity: { duration: 0.6, delay: confession.delay },
-              x: { duration: 0.6, delay: confession.delay },
-              scale: { duration: 0.3 }
+            transition={{
+              opacity: { duration: 0.66, delay: confession.delay * 1.11 }, // Scaled by ~1.11
+              x: { duration: 0.66, delay: confession.delay * 1.11 },
+              scale: { duration: 0.33 }
             }}
             whileHover={{ scale: 1.02, x: 5 }}
           >
             <img alt={confession.text} className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={confession.img} />
           </motion.div>
         ))}
-        
+
         <Header />
         <Pagination />
       </div>
