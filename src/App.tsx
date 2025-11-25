@@ -153,6 +153,7 @@ export default function App() {
         signupUsername,
         isAdmin,
         currentPage,
+        lastActive: Date.now(), // Update last active time whenever state changes
       };
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
     } catch (error) {
@@ -319,8 +320,18 @@ export default function App() {
         if (typeof parsed.signupUsername === 'string') setSignupUsername(parsed.signupUsername);
         if (typeof parsed.isAdmin === 'boolean') setIsAdmin(parsed.isAdmin);
         if (typeof parsed.currentPage === 'number') {
-          const safePage = Math.min(Math.max(parsed.currentPage, 0), magazinePages.length - 1);
-          setCurrentPage(safePage);
+          // Check for inactivity (30 minutes)
+          const lastActive = parsed.lastActive || 0;
+          const thirtyMinutesInMs = 30 * 60 * 1000;
+          const now = Date.now();
+
+          if (now - lastActive > thirtyMinutesInMs) {
+            console.log('User inactive for > 30 mins, resetting to cover page');
+            setCurrentPage(0);
+          } else {
+            const safePage = Math.min(Math.max(parsed.currentPage, 0), magazinePages.length - 1);
+            setCurrentPage(safePage);
+          }
         }
       }
     } catch (error) {

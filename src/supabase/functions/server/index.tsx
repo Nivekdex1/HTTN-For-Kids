@@ -28,7 +28,11 @@ app.get('/make-server-3669e37f/health', (c) => {
 async function getUserFromToken(accessToken: string | null) {
   if (!accessToken) return { error: 'No access token provided' };
 
-  // Check for session expiration (6 hours)
+  // Check for session expiration (REMOVED as per user request)
+  // We now rely on client-side inactivity check to reset to cover page,
+  // but the session itself remains valid indefinitely (or until KV eviction).
+
+  /* 
   try {
     const parts = accessToken.split('_');
     const timestamp = parseInt(parts[parts.length - 1]);
@@ -36,9 +40,9 @@ async function getUserFromToken(accessToken: string | null) {
     const now = Date.now();
 
     console.log(`Checking token: ${accessToken}`);
-    console.log(`Timestamp: ${timestamp}, Now: ${now}, Diff: ${diff}, Limit: ${sixHoursInMs}`);
+    console.log(`Timestamp: ${timestamp}, Now: ${now}, Limit: ${sixHoursInMs}`);
 
-    if (now - timestamp > sixHoursInMs) { // Fixed ReferenceError: diff is not defined
+    if (now - timestamp > sixHoursInMs) {
       console.log('Session expired for token:', accessToken);
       // Optional: Clean up expired session
       await kv.del(`session:${accessToken}`);
@@ -46,9 +50,8 @@ async function getUserFromToken(accessToken: string | null) {
     }
   } catch (e) {
     console.log('Error checking session expiration:', e);
-    // If token format is invalid, we might still want to check if it exists in KV,
-    // but for now let's proceed to check KV validity.
   }
+  */
 
   const sessionKey = `session:${accessToken}`;
   console.log(`Attempting to retrieve session from KV with key: ${sessionKey}`);
